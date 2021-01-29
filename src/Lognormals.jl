@@ -2,8 +2,6 @@ module Lognormals
 
 export plusTwo
 
-greet() = print("Hello World!")
-
 """
     plusTwo(x)
 
