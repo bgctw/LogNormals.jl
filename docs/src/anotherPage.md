@@ -1,8 +1,8 @@
 # The Lognormals Module
 
- ```@docs
+```@docs
  Lognormals
- ```
+```
 
 ## Module Index
 
