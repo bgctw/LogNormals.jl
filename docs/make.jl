@@ -13,6 +13,6 @@ makedocs(sitename="Lognormals.jl Documentation",
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/sylvaticus/Lognormals.jl.git",
+    repo = "github.com/bgctw/Lognormals.jl.git",
     devbranch = "main"
 )
