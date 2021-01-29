@@ -5,11 +5,13 @@ out = plusTwo(3)
 
 # two moments
 M = Moments(1,0.5)
+@test length(typeof(M)) == 2
 @test length(M) == 2
 #@test length(typeof(M)) == 2
 @test mean(M) == M[1] == 1
 @test var(M) == M[2] == 0.5
 @test ismissing(skewness(M)) & ismissing(M[3])
+@test ismissing(kurtosis(M)) & ismissing(M[4])
 typeof(convert(AbstractArray,M)) <: AbstractArray
 
 # no moments

@@ -34,7 +34,7 @@ typeof(convert(AbstractArray,M)) <: AbstractArray
 ```
 """
 abstract type AbstractMoments{N} end
-Base.length(::Type{AbstractMoments{N}}) where N = N
+Base.length(::Type{<:AbstractMoments{N}}) where N = N
 Base.length(M::AbstractMoments{N}) where N = N
 Distributions.mean(M::AbstractMoments) = length(M) >= 1 ? M[1] : missing
 Distributions.var(M::AbstractMoments) = length(M) >= 2 ? M[2] : missing
