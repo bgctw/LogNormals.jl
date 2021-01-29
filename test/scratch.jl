@@ -13,18 +13,9 @@ M = Moments(3)
 
 a = [1,2]
 
+using Lognormals
 using StaticArrays, Distributions
-test(a::T...) where T <: Number= SVector{length(a)}(a...)
-sa = test(1,3)
 
-using ResultTypes
-function integer_division(x::Int, y::Int)::Result{Int, DivideError}
-    if y == 0
-        return DivideError()
-    else
-        return div(x, y)
-    end
-end
 
-x = integer_division(3,2)
-x == 1
+D = fit(LogNormal, @qs_muu(3,9))
+
