@@ -1,0 +1,11 @@
+name = "Lognormals"
+uuid = "b68ae993-0436-406f-90b1-cda2b8f6e45f"
+authors = ["Thomas Wutzler <progtw@arcor.de>"]
+version = "0.1.0"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+
+[compat]
+julia = "1.5.1"
+Distributions = "0.23, 0.24"
