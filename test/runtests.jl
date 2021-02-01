@@ -1,8 +1,5 @@
 using Test, Distributions, LogNormals 
 
-out = plusTwo(3)
-@test out == 5
-
 # two moments
 M = Moments(1,0.5)
 @test length(typeof(M)) == 2
@@ -13,14 +10,12 @@ M = Moments(1,0.5)
 @test std(M) == sqrt(0.5)
 @test_throws Exception skewness(M)
 @test_throws Exception kurtosis(M)
-typeof(convert(AbstractArray,M)) <: AbstractArray
 
 # no moments
 M = Moments()
 @test length(M) == 0
 @test_throws Exception mean(M)
 @test_throws Exception M[1]
-typeof(convert(AbstractArray,M)) <: AbstractArray
 
 # moments function of Distribution
 D = Normal(2,5)
@@ -37,7 +32,7 @@ function testMoments(D)
     @test [m[i] for i in 1:length(m)] == []
 end
 testMoments(D)
-testMoments(LogNormal(2,5)
+testMoments(LogNormal(2,5))
 
 
 # distribution parameters from moments
@@ -102,7 +97,7 @@ D = fit(LogNormal, qpu, qpl) # sort
 D = fit(LogNormal, moments(DN));
 @test mean(D) == mean(DN) && var(D) == var(DN)
 
-if (FALSE) # only interactively
+if (false) # only interactively
     using StatsPlots
     plot(D); 
     plot!(DN, linetype = :line)

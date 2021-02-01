@@ -1,6 +1,6 @@
 module LogNormals
 
-export AbstractMoments, Moments, QuantilePoint, 
+export AbstractMoments, Moments, QuantilePoint, moments,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95
 
