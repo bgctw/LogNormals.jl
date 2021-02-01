@@ -49,7 +49,7 @@ Dfit = fit(LogNormal, M)
 # handle not giving variance
 @test_throws Exception fit(LogNormal, Moments(3.2))
 
-# Quantile Point and QuantileSet
+# Quantile Point and 
 qp1 = QuantilePoint(0.25,2);
 qp2 = QuantilePoint(0.95,7.5);
 

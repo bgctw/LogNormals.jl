@@ -1,12 +1,12 @@
 module LogNormals
 
-export plusTwo, AbstractMoments, Moments, QuantilePoint, QuantileSet, 
+export AbstractMoments, Moments, QuantilePoint, 
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95
 
 
 using Distributions, StaticArrays
-import DataStructures
+
 
 """
     AbstractMoments
@@ -126,8 +126,6 @@ function Base.isless(x::QuantilePoint,y::QuantilePoint)
     return(isless)
 end
 
-QuantileSet = DataStructures.SortedSet{QuantilePoint} 
-
 macro qp(p,q) :(QuantilePoint($p, $q)) end
 macro qp_ll(q0_025) :(QuantilePoint(0.025, $q0_025)) end
 macro qp_l(q0_05) :(QuantilePoint(0.05, $q0_05)) end
@@ -141,7 +139,7 @@ macro qs_cf95(q0_025,q0_975)
     :(Set([QuantilePoint(0.025,$q0_025),QuantilePoint(0.975,$q0_975)])) end    
 
 """
-fit(Distribution, qset:QuantileSet)
+fit(Distribution, lower::QuantilePoint, upper::QuantilePoint)
 
 Fit a statistical distribution to a set of quantiles 
 
