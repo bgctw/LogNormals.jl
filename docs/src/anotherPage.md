@@ -1,18 +1,18 @@
-# The Lognormals Module
+# The LogNormals Module
 
 ```@docs
- Lognormals
+ LogNormals
 ```
 
 ## Module Index
 
 ```@index
-Modules = [Lognormals]
+Modules = [LogNormals]
 Order   = [:constant, :type, :function, :macro]
 ```
 ## Detailed API
 
 ```@autodocs
-Modules = [Lognormals]
+Modules = [LogNormals]
 Order   = [:constant, :type, :function, :macro]
 ```

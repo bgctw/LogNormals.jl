@@ -13,9 +13,10 @@ M = Moments(3)
 
 a = [1,2]
 
-using Lognormals
+using LogNormals
 using StaticArrays, Distributions
 
 
 D = fit(LogNormal, @qs_muu(3,9))
 
+moments(::Val{N} = Val(3)) where N = zeros(SVector{N})

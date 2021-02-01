@@ -1,8 +1,8 @@
-module Lognormals
+module LogNormals
 
 export plusTwo, AbstractMoments, Moments, QuantilePoint, QuantileSet, 
-    @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uum, 
-    @qs_cf90, @qs_cf95, @qs_mu, @qs_muu
+    @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
+    @qs_cf90, @qs_cf95
 
 
 using Distributions, StaticArrays
@@ -60,7 +60,25 @@ Moments(x...) = Moments(SVector{length(x)}(promote(x...)))
 Moments() = Moments(SA[])
 Base.getindex(M::Moments, i) = length(M) >= i ? M.all[i] : 
     error("$(i)th moment not defined.")
-Base.convert(::Type{AbstractArray}, M::Moments) = M.all
+#Base.convert(::Type{AbstractArray}, M::Moments) = M.all
+
+function moments(D::LogNormal, ::Val{N} = Val(3)) where N 
+    N > 4 && error("getting moments above 4 not yet implemented.")
+    N == 4 && return(Moments(mean(D), var(D), skewness(D), kurtosis(D)))
+    N == 3 && return(Moments(mean(D), var(D), skewness(D)))
+    N == 2 && return(Moments(mean(D), var(D)))
+    N == 1 && return(Moments(mean(D)))
+    N == 0 && return(Moments())
+end
+
+function moments(D::Normal, ::Val{N} = Val(3)) where N 
+    N > 4 && error("getting moments above 4 not yet implemented.")
+    N == 4 && return(Moments(mean(D), var(D), skewness(D), kurtosis(D)))
+    N == 3 && return(Moments(mean(D), var(D), skewness(D)))
+    N == 2 && return(Moments(mean(D), var(D)))
+    N == 1 && return(Moments(mean(D)))
+    N == 0 && return(Moments())
+end
 
 """
     fit(Distribution, m::Moments)
@@ -71,9 +89,14 @@ Fit a statistical distribution to its moments
 - `Distribution`: The type of distribution to fit
 - `m`: The moments of the distribution
 
+# Notes
+This can be used to approximate one distribution by another
+
 # Examples
 ```julia
 D = fit(LogNormal, Moments(3.2,4.6))
+D = fit(LogNormal, moments(Normal(3,1)))
+plot(D); lines(!Normal(3,1))
 ```
 """
 function Distributions.fit(::Type{LogNormal}, m::AbstractMoments)
@@ -105,20 +128,17 @@ end
 
 QuantileSet = DataStructures.SortedSet{QuantilePoint} 
 
-macro qp_ll(q0_025) :(QuantilePoint(0.025, $q)) end
-macro qp_l(q0_05) :(QuantilePoint(0.05, $q)) end
-macro qp_m(median) :(QuantilePoint(0.5, $q)) end
-macro qp_u(q_95) :(QuantilePoint(0.95, $q)) end
-macro qp_uu(q_975) :(QuantilePoint(0.975, $q)) end
+macro qp(p,q) :(QuantilePoint($p, $q)) end
+macro qp_ll(q0_025) :(QuantilePoint(0.025, $q0_025)) end
+macro qp_l(q0_05) :(QuantilePoint(0.05, $q0_05)) end
+macro qp_m(median) :(QuantilePoint(0.5, $median)) end
+macro qp_u(q0_95) :(QuantilePoint(0.95, $q0_95)) end
+macro qp_uu(q0_975) :(QuantilePoint(0.975, $q0_975)) end
 
-macro qs_cf90(lower,upper) 
-    :(QuantileSet([QuantilePoint(0.05,$lower),QuantilePoint(0.95,$upper)])) end
-macro qs_cf95(lower,upper) 
-    :(QuantileSet([QuantilePoint(0.025,$lower),QuantilePoint(0.975,$upper)])) end    
-macro qs_mu(median,upper) 
-    :(QuantileSet([QuantilePoint(0.5,$median),QuantilePoint(0.9,$upper)])) end
-macro qs_muu(median,upper) 
-    :(QuantileSet([QuantilePoint(0.5,$median),QuantilePoint(0.975,$upper)])) end        
+macro qs_cf90(q0_05,q0_95) 
+    :(Set([QuantilePoint(0.05,$q0_05),QuantilePoint(0.95,$q0_95)])) end
+macro qs_cf95(q0_025,q0_975) 
+    :(Set([QuantilePoint(0.025,$q0_025),QuantilePoint(0.975,$q0_975)])) end    
 
 """
 fit(Distribution, qset:QuantileSet)
@@ -135,25 +155,30 @@ TODO
 
 # Examples
 ```julia
-D = fit(LogNormal, @qs_muu(3,9))
-quantile.(D, [0.5, 0.975]) ≈ [3,9]
+DN = fit(Normal, @qp_m(3), @qp_uu(5))
+D = fit(LogNormal, @qp_m(3), @qp_uu(5))
+quantile.(D, [0.5, 0.975]) ≈ [3,5]
 ```
 """
-function Distributions.fit(::Type{LogNormal}, qset::QuantileSet)
-    length(qset) == 2 || error("only implemented yet for exactly two quantiles.")
-    qset_log = [QuantilePoint(qp, q = log(qp.q)) for qp in qset]
-    DN = normal_from_two_quantiles(qset_log[1], qset_log[2])
-    LogNormal(DN.μ, DN.σ)
+function Distributions.fit(::Type{LogNormal}, lower::QuantilePoint, upper::QuantilePoint)
+    #length(qset) == 2 || error("only implemented yet for exactly two quantiles.")
+    #qset_log = [QuantilePoint(qp, q = log(qp.q)) for qp in qset]
+    lower_log = QuantilePoint(lower, q = log(lower.q))
+    upper_log = QuantilePoint(upper, q = log(upper.q))
+    DN = fit(Normal, lower_log, upper_log)
+    LogNormal(params(DN)...)
 end
 
-function normal_from_two_quantiles(qp1::QuantilePoint, qp2::QuantilePoint)
+function Distributions.fit(::Type{Normal}, lower::QuantilePoint, upper::QuantilePoint)
     # https://www.johndcook.com/quantiles_parameters.pdf
-    @assert qp1 < qp2
-    qz1 = quantile(Normal(), qp1.p)
-    qz2 = quantile(Normal(), qp2.p)
+    if (upper < lower) 
+        lower,upper = (upper,lower)
+    end
+    qz1 = quantile(Normal(), lower.p)
+    qz2 = quantile(Normal(), upper.p)
     dqz = (qz2 - qz1)
-    σ = (qp2.q - qp1.q)/dqz
-    μ = (qp1.q*qz2 - qp2.q*qz1)/dqz
+    σ = (upper.q - lower.q)/dqz
+    μ = (lower.q*qz2 - upper.q*qz1)/dqz
     Normal(μ,σ)
 end
     

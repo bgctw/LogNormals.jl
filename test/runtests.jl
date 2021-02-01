@@ -1,4 +1,4 @@
-using Test, Distributions, Lognormals 
+using Test, Distributions, LogNormals 
 
 out = plusTwo(3)
 @test out == 5
@@ -21,6 +21,24 @@ M = Moments()
 @test_throws Exception mean(M)
 @test_throws Exception M[1]
 typeof(convert(AbstractArray,M)) <: AbstractArray
+
+# moments function of Distribution
+D = Normal(2,5)
+function testMoments(D)
+    m = moments(D, Val(4))
+    @test [m[i] for i in 1:length(m)] == [mean(D), var(D), skewness(D), kurtosis(D)]
+    m = moments(D, Val(3))
+    @test [m[i] for i in 1:length(m)] == [mean(D), var(D), skewness(D)]
+    m = moments(D, Val(2))
+    @test [m[i] for i in 1:length(m)] == [mean(D), var(D)]
+    m = moments(D, Val(1))
+    @test [m[i] for i in 1:length(m)] == [mean(D)]
+    m = moments(D, Val(0))
+    @test [m[i] for i in 1:length(m)] == []
+end
+testMoments(D)
+testMoments(LogNormal(2,5)
+
 
 # distribution parameters from moments
 D = LogNormal(1,0.6)
@@ -54,19 +72,43 @@ qp3 = QuantilePoint(qp1, q = 3);
 @test qp3.q == 3
 @test qp3.p == qp1.p == 0.25
 
-#println("QuantileSet")
-qset = QuantileSet([qp2,qp1]);
-@test first(qset)== qp1 # reordered
+# macros QuantilePoint
+@test @qp(0.4,0.7) == QuantilePoint(0.4,0.7)
+@test @qp_ll(0.7) == QuantilePoint(0.025,0.7)
+@test @qp_l(0.7) == QuantilePoint(0.05,0.7)
+@test @qp_m(0.7) == QuantilePoint(0.5,0.7)
+@test @qp_u(0.7) == QuantilePoint(0.95,0.7)
+@test @qp_uu(0.7) == QuantilePoint(0.975,0.7)
+
+@test @qs_cf90(0.2,0.7) == Set([@qp_l(0.2),@qp_u(0.7)])
+@test @qs_cf95(0.2,0.7) == Set([@qp_ll(0.2),@qp_uu(0.7)])
+
 
 #println("fitting normal")
-DN = Lognormals.normal_from_two_quantiles(qp1,qp2);
-@test quantile.(DN, [qp1.p, qp2.p]) ≈ [qp.q for qp in qset]
+qpl = @qp_m(3)
+qpu = @qp_u(5)
+DN = fit(Normal, qpl, qpu)
+@test quantile.(DN, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+DN = fit(Normal, qpu, qpl) # sort
+@test quantile.(DN, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
 
 #println("fitting lognormal")
-D = fit(LogNormal, qset);
-@test quantile.(D, [qp1.p, qp2.p]) ≈ [qp.q for qp in qset]
+D = fit(LogNormal, qpl, qpu);
+@test quantile.(D, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+D = fit(LogNormal, qpu, qpl) # sort
+@test quantile.(D, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
 
-#println("fitting end")
+#println("Approximate Normal by lognormal")
+D = fit(LogNormal, moments(DN));
+@test mean(D) == mean(DN) && var(D) == var(DN)
+
+if (FALSE) # only interactively
+    using StatsPlots
+    plot(D); 
+    plot!(DN, linetype = :line)
+    vline!([mean(D)])
+end
+
 
 
 

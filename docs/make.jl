@@ -1,8 +1,8 @@
 using Documenter
-using Lognormals
+using LogNormals
 
 push!(LOAD_PATH,"../src/")
-makedocs(sitename="Lognormals.jl Documentation",
+makedocs(sitename="LogNormals.jl Documentation",
          pages = [
             "Index" => "index.md",
             "An other page" => "anotherPage.md",
@@ -13,6 +13,6 @@ makedocs(sitename="Lognormals.jl Documentation",
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/bgctw/Lognormals.jl.git",
+    repo = "github.com/bgctw/LogNormals.jl.git",
     devbranch = "main"
 )

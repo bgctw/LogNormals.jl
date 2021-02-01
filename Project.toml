@@ -1,4 +1,4 @@
-name = "Lognormals"
+name = "LogNormals"
 uuid = "b68ae993-0436-406f-90b1-cda2b8f6e45f"
 authors = ["Thomas Wutzler <progtw@arcor.de>"]
 version = "0.1.0"
