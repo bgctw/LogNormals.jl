@@ -147,6 +147,11 @@ if (false) # only interactively
     vline!([mode(D), mode(Df)])
 end
 
+#println("fit to quantilePoint and median")
+D = LogNormal(1,1)
+qp = @qp(0.95,quantile(D,0.95))
+Df = fit(LogNormal, median(D), qp, Val(:median))
+@test Df ≈ D
 
 
 

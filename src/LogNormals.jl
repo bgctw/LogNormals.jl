@@ -192,7 +192,8 @@ Fit a statistical distribution to a quantile and given statistics
 - `Distribution`: The type of distribution to fit
 - `val`: The value of statistics
 - `qp`: QuantilePoint(p,q)
-- `stats` Which statistics to fit: defaults to `Val(:mean)`. Alternatives: `Val(:mode)`
+ `stats` Which statistics to fit: defaults to `Val(:mean)`. 
+   Alternatives are: `Val(:mode)`, `Val(:median)`
 
 # Examples
 ```julia
@@ -205,6 +206,7 @@ mode(D) ≈ 5 && quantile(D, 0.975)
 function Distributions.fit(DT::Type{<:Distribution}, val::Real, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where stats
     stats == :mean && return(_fit_mean_quantile(DT, val, qp))
     stats == :mode && return(_fit_mode_quantile(DT, val, qp))
+    stats == :median && return(fit(DT, @qp_m(val), qp))
     error("unknown stats: $stats")
 end
 
