@@ -105,5 +105,28 @@ if (false) # only interactively
 end
 
 
+#println("fit to quantilePoint and mean")
+D = LogNormal(1,1)
+m = log(mean(D))
+
+#@macroexpand @qp(0.95,quantile(D,0.95))
+qp = @qp(0.95,quantile(D,0.95))
+Df = fit(LogNormal, qp, mean = mean(D))
+@test Df ≈ D
+# with lower quantile
+qp = @qp(0.05,quantile(D,0.05))
+Df = fit(LogNormal, qp, mean = mean(D))
+@test Df ≈ D
+# very close to mean can give very different results:
+qp = @qp(0.95,mean(D)-1e-4)
+Df = fit(LogNormal, qp, mean = mean(D))
+@test mean(Df) ≈ mean(D) && quantile(Df, qp.p) ≈ qp.q
+if (false) # only interactively
+    using StatsPlots
+    plot(D); plot!(Df, linetype = :line)
+    vline!([mean(D)])
+end
+
+
 
 

@@ -31,3 +31,15 @@ using StaticArrays, Distributions
 
 D = fit(LogNormal, @qp_m(3), @qp_uu(9))
 
+function Distributions.fit(::Type{LogNormal}; mean::Real, mult_std::Real)
+    sigma = log(mult_std)
+    mu = log(mean) - sigma*sigma/2
+    LogNormal(mu, sigma)
+end
+
+mult_std(D::LogNormal) = exp(params(D)[2])
+
+D = fit(LogNormal; mean = 4, mult_std = exp(1))
+exp(params(D)[2])
+
+@test mean(D) ≈ 4 && mult_std(D) ≈ exp(1)

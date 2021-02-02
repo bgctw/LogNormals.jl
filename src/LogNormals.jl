@@ -126,17 +126,17 @@ function Base.isless(x::QuantilePoint,y::QuantilePoint)
     return(isless)
 end
 
-macro qp(p,q) :(QuantilePoint($p, $q)) end
-macro qp_ll(q0_025) :(QuantilePoint(0.025, $q0_025)) end
-macro qp_l(q0_05) :(QuantilePoint(0.05, $q0_05)) end
-macro qp_m(median) :(QuantilePoint(0.5, $median)) end
-macro qp_u(q0_95) :(QuantilePoint(0.95, $q0_95)) end
-macro qp_uu(q0_975) :(QuantilePoint(0.975, $q0_975)) end
+macro qp(p,q) :(QuantilePoint($(esc(p)), $(esc(q)))) end
+macro qp_ll(q0_025) :(QuantilePoint(0.025, $(esc(q0_025)))) end
+macro qp_l(q0_05) :(QuantilePoint(0.05, $(esc(q0_05)))) end
+macro qp_m(median) :(QuantilePoint(0.5, $(esc(median)))) end
+macro qp_u(q0_95) :(QuantilePoint(0.95, $(esc(q0_95)))) end
+macro qp_uu(q0_975) :(QuantilePoint(0.975, $(esc(q0_975)))) end
 
 macro qs_cf90(q0_05,q0_95) 
-    :(Set([QuantilePoint(0.05,$q0_05),QuantilePoint(0.95,$q0_95)])) end
+    :(Set([QuantilePoint(0.05,$(esc(q0_05))),QuantilePoint(0.95,$(esc(q0_95)))])) end
 macro qs_cf95(q0_025,q0_975) 
-    :(Set([QuantilePoint(0.025,$q0_025),QuantilePoint(0.975,$q0_975)])) end    
+    :(Set([QuantilePoint(0.025,$(esc(q0_025))),QuantilePoint(0.975,$(esc(q0_975)))])) end    
 
 """
 fit(Distribution, lower::QuantilePoint, upper::QuantilePoint)
@@ -145,11 +145,17 @@ Fit a statistical distribution to a set of quantiles
 
 # Arguments
 - `Distribution`: The type of distribution to fit
-- `qset`: A ordered set of QuantilePoints (p,q)
+- `lower`:  lower QuantilePoint (p,q)
+- `upper`:  upper QuantilePoint (p,q)
 
 # Notes
-Several macros help to construct ordered sets of QuantilePoints
-TODO
+Several macros help to construct QuantilePoints
+@qp(p,q)       QuantilePoint(p, q)
+@qp_ll(q0_025) quantile at very low p = 0.025 
+@qp_l(q0_05)   quantile at low p = 0.05 
+@qp_m(median)  quantile at median: p = 0.5 
+@qp_u(q0_95)   quantile at high p = 0.95 
+@qp_uu(q0_975) quantile at very high p = 0.975 
 
 # Examples
 ```julia
@@ -179,5 +185,35 @@ function Distributions.fit(::Type{Normal}, lower::QuantilePoint, upper::Quantile
     μ = (lower.q*qz2 - upper.q*qz1)/dqz
     Normal(μ,σ)
 end
+
+"""
+    fit(Distribution, qp::QuantilePoint; mean::Real)
+
+Fit a statistical distribution to a quantile and mean 
+
+# Arguments
+- `Distribution`: The type of distribution to fit
+- `qp`: QuantilePoint(p,q)
+
+# Examples
+```julia
+D = fit(LogNormal, @qp_uu(14); mean = 5)
+quantile(D, 0.975) ≈ 14 && mean(D) ≈ 5
+```
+"""
+function Distributions.fit(::Type{LogNormal}, qp::QuantilePoint; mean::Real)
+    # solution of
+    # (1) mle = exp(mu - sigma^2)
+    # (2) upper = mu + sigmaFac sigma
+    # see R packaage lognorm inst/doc/coefLognorm.Rmd for derivation
+    sigmaFac = quantile(Normal(),qp.p)
+    m = log(mean)
+    discr = sigmaFac^2 - 2*(log(qp.q) - m)
+    (discr > 0) || error("Cannot fit LogNormal with quantile $(qp) and mean $(mean).")
+    sigma = sigmaFac > sqrt(discr) ? (sigmaFac - sqrt(discr)) : sigmaFac + sqrt(discr)
+    mu = m - sigma^2/2
+    LogNormal(mu, sigma)
+end
+  
     
 end # module
