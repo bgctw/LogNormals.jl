@@ -108,24 +108,46 @@ end
 #println("fit to quantilePoint and mean")
 D = LogNormal(1,1)
 m = log(mean(D))
-
 #@macroexpand @qp(0.95,quantile(D,0.95))
 qp = @qp(0.95,quantile(D,0.95))
-Df = fit(LogNormal, qp, mean = mean(D))
+Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
+@test Df ≈ D
+Df = fit(LogNormal, mean(D), qp, Val(:mean))
 @test Df ≈ D
 # with lower quantile
 qp = @qp(0.05,quantile(D,0.05))
-Df = fit(LogNormal, qp, mean = mean(D))
+Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
 @test Df ≈ D
 # very close to mean can give very different results:
 qp = @qp(0.95,mean(D)-1e-4)
-Df = fit(LogNormal, qp, mean = mean(D))
+Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
 @test mean(Df) ≈ mean(D) && quantile(Df, qp.p) ≈ qp.q
 if (false) # only interactively
     using StatsPlots
     plot(D); plot!(Df, linetype = :line)
     vline!([mean(D)])
 end
+
+#println("fit to quantilePoint and mode")
+D = LogNormal(1,1)
+m = log(mode(D))
+#@macroexpand @qp(0.95,quantile(D,0.95))
+qp = @qp(0.95,quantile(D,0.95))
+Df = LogNormals._fit_mode_quantile(LogNormal, mode(D), qp)
+@test Df ≈ D
+Df = fit(LogNormal, mode(D), qp, Val(:mode))
+@test Df ≈ D
+# with lower quantile
+qp = @qp(0.025,quantile(D,0.025))
+Df = LogNormals._fit_mode_quantile(LogNormal, mode(D), qp)
+@test mode(Df) ≈ mode(D) && quantile(Df, qp.p) ≈ qp.q
+if (false) # only interactively
+    using StatsPlots
+    plot(D); plot!(Df, linetype = :line, xlim=(0,quantile(D, 0.975)))
+    vline!([mode(D), mode(Df)])
+end
+
+
 
 
 

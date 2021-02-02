@@ -43,3 +43,5 @@ D = fit(LogNormal; mean = 4, mult_std = exp(1))
 exp(params(D)[2])
 
 @test mean(D) ≈ 4 && mult_std(D) ≈ exp(1)
+
+
