@@ -119,7 +119,7 @@ D = fit(LogNormal, moments(Normal(3,1.2)));
 plot(D); lines(!Normal(3,1.2))
 ```
 """
-function Distributions.fit(::Type{<:Distribution}, m::AbstractMoments) end
+function Distributions.fit(::Type{D}, m::AbstractMoments) where {D<:Distribution} end
 
 
 
@@ -181,7 +181,7 @@ quantile.(d, [0.5, 0.975]) ≈ [3,5]
 true
 ```
 """
-function Distributions.fit(::Type{<:Distribution}, lower::QuantilePoint, upper::QuantilePoint) end
+function Distributions.fit(::Type{D}, lower::QuantilePoint, upper::QuantilePoint) where D<:Distribution end
 
 
 
@@ -211,7 +211,7 @@ d = fit(LogNormal, 5, @qp_uu(14), Val(:mode));
 (true, true)
 ```
 """
-function Distributions.fit(D::Type{<:Distribution}, val, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where stats
+function Distributions.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where {D<:Distribution, stats}
     stats == :mean && return(fit_mean_quantile(D, val, qp))
     stats == :mode && return(fit_mode_quantile(D, val, qp))
     stats == :median && return(fit(D, @qp_m(val), qp))
