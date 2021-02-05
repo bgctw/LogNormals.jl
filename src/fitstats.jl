@@ -18,13 +18,9 @@ The basic implementation `Moments` is immutable and
 `convert(AbstractArray, m::Moments)` returns an `SArray{N,T}`.
 
 # Examples
-```jldoctest am; output = false
+```jldoctest am; output = false, setup = :(using Statistics,Distributions,LogNormals)
 m = Moments(1,0.2);
 n_moments(m) == 2
-# output
-true
-```
-```jldoctest am; output = false
 var(m) == m[2]
 # output
 true
@@ -100,16 +96,13 @@ See also [`AbstractMoments`](@ref), [`moments`](@ref).
 
 
 # Examples
-```@meta
-DocTestSetup = :(using Statistics,Distributions,LogNormals)
-```
-```jldoctest fm1; output = false
+```jldoctest fm1; output = false, setup = :(using Statistics,Distributions,LogNormals)
 D = fit(LogNormal, Moments(3.2,4.6));
 (mean(D), var(D)) .≈ (3.2,4.6)
 # output
 (true, true)
 ```
-```jldoctest fm1; output = false
+```jldoctest fm1; output = false, setup = :(using Statistics,Distributions,LogNormals)
 D = fit(LogNormal, moments(Normal(3,1.2)));
 (mean(D), std(D)) .≈ (3,1.2)
 # output
@@ -174,7 +167,7 @@ Several macros help to construct QuantilePoints
 - `@qp_uu(q0_975)`  quantile at very high p: `QuantilePoint(0.975, q0_975)` 
 
 # Examples
-```jldoctest; output = false
+```jldoctest; output = false, setup = :(using Statistics,Distributions,LogNormals)
 d = fit(LogNormal, @qp_m(3), @qp_uu(5));
 quantile.(d, [0.5, 0.975]) ≈ [3,5]
 # output
@@ -198,13 +191,13 @@ Fit a statistical distribution to a quantile and given statistics
    Alternatives are: `Val(:mode)`, `Val(:median)`
 
 # Examples
-```jldoctest fm2; output = false
+```jldoctest fm2; output = false, setup = :(using Statistics,Distributions,LogNormals)
 d = fit(LogNormal, 5, @qp_uu(14));
 (mean(d),quantile(d, 0.975)) .≈ (5,14)
 # output
 (true, true)
 ```
-```jldoctest fm2; output = false
+```jldoctest fm2; output = false, setup = :(using Statistics,Distributions,LogNormals)
 d = fit(LogNormal, 5, @qp_uu(14), Val(:mode));
 (mode(d),quantile(d, 0.975)) .≈ (5,14)
 # output
