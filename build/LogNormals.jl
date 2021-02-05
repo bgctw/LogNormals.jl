@@ -1,8 +1,5 @@
 """
-Tools that help using the LogNormal distribution.
-
-- Fitting to various aggregate statistics
-- Sum of correlated lognormal random variables
+    Helpers to fit LogNormal distributions.
 """
 module LogNormals
 

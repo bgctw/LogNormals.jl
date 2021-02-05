@@ -67,3 +67,9 @@ function fitstats_docu()
     d = fit(LogNormal, moments(dn))
     (mean(d), var(d)) .≈ (3.0, 4.0)
 end
+
+# some occurence of true
+# https://stackoverflow.com/questions/406230/regular-expression-to-match-a-line-that-doesnt-contain-a-word
+occursin.(r"^((?!true|\(true).)*$",["true", "(true, true)", "not true", "other", ""])
+# true or (true at the beginning
+occursin.(r"^(?!true|\(true).",["true", "(true, true)", "not true", "other", ""])

@@ -167,7 +167,8 @@ dfit = fit(Normal, mode(d), qp, Val(:mode))
 
 # testing examples
 # make sure to not test for error. This does not work in test, because error compromises former output
-DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
-doctest(LogNormals, manual = false)
+# better keep docu and tests separated, but test execution of examples too.
+#DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
+#doctest(LogNormals, manual = false)
 
 

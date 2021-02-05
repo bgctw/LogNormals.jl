@@ -2,14 +2,15 @@ using Documenter
 using LogNormals, Distributions
 
 push!(LOAD_PATH,"../src/")
-DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
+DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
+#DocMeta.setdocmeta!(LogNormals, :DocTestFilters, :(using Distributions,LogNormals); recursive=true)
 makedocs(sitename="LogNormals.jl",
          pages = [
             "Home" => "index.md",
             "Fit to statistic" => "fitstats.md",
             "Sum LogNormals" => "sumlognormals.md",
-            #"misc" => "misc.md",
          ],
+         modules = [LogNormals],
          format = Documenter.HTML(prettyurls = false)
 )
 # Documenter can also automatically deploy documentation to gh-pages.

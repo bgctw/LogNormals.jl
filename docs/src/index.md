@@ -2,10 +2,20 @@
 
 # LogNormals Package
 
-The *LogNormals* package provides tools that help using
-the LogNormal distribution.
-
-* Fitting to various aggregate statistics
-* Sum of correlated lognormal random variables
+```@docs
+ LogNormals
+```
 
 see the [github repository](https://github.com/bgctw/LogNormals.jl).
+
+
+```@meta
+DocTestSetup = :(using Statistics,Distributions,LogNormals)
+```
+
+```jldoctest
+m = Moments(1,0.2)
+n_moments(m) == 2, var(m) == m[2]
+# output
+(true, true)
+```

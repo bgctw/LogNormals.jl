@@ -3,7 +3,10 @@
 This package provides method to fit a distribution to a given
 set of aggregate statistics.
 
-```julia
+```@meta
+DocTestSetup = :(using Statistics,Distributions,LogNormals)
+```
+```jldoctest; output = false
 # to specified moments
 d = fit(LogNormal, Moments(3.0,4.0))
 (mean(d), var(d)) .≈ (3.0, 4.0)
@@ -24,6 +27,8 @@ d = fit(LogNormal, @qp_ll(1.0), @qp_uu(8))
 dn = Normal(3,2)
 d = fit(LogNormal, moments(dn))
 (mean(d), var(d)) .≈ (3.0, 4.0)
+# output
+(true, true)
 ```
 
 ## Fit to statistical moments
