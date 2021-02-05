@@ -2,7 +2,8 @@ using Documenter
 using LogNormals, Distributions
 
 push!(LOAD_PATH,"../src/")
-DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Pkg; Pkg.add(Distributions); using Statistics,Distributions,LogNormals); recursive=true)
+#DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Pkg; Pkg.add("Distributions"); using Statistics,Distributions,LogNormals); recursive=true)
+DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
 #DocMeta.setdocmeta!(LogNormals, :DocTestFilters, :(using Distributions,LogNormals); recursive=true)
 makedocs(sitename="LogNormals.jl",
          pages = [
