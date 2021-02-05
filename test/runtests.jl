@@ -1,38 +1,40 @@
 using Test, Distributions, LogNormals 
 
 # two moments
-M = Moments(1,0.5)
-@test length(typeof(M)) == 2
-@test length(M) == 2
-#@test length(typeof(M)) == 2
-@test mean(M) == M[1] == 1
-@test var(M) == M[2] == 0.5
-@test std(M) == sqrt(0.5)
-@test_throws Exception skewness(M)
-@test_throws Exception kurtosis(M)
+m = Moments(1,0.5)
+@test n_moments(typeof(m)) == 2
+@test n_moments(m) == 2
+#@test n_moments(typeof(M)) == 2
+@test mean(m) == m[1] == 1
+@test var(m) == m[2] == 0.5
+@test std(m) == sqrt(0.5)
+@test_throws Exception skewness(m)
+@test_throws Exception kurtosis(m)
 
 # no moments
-M = Moments()
-@test length(M) == 0
-@test_throws Exception mean(M)
-@test_throws Exception M[1]
+m = Moments()
+@test n_moments(m) == 0
+@test_throws Exception mean(m)
+@test_throws Exception m[1]
 
 # moments function of Distribution
-D = Normal(2,5)
-function testMoments(D)
-    m = moments(D, Val(4))
-    @test [m[i] for i in 1:length(m)] == [mean(D), var(D), skewness(D), kurtosis(D)]
-    m = moments(D, Val(3))
-    @test [m[i] for i in 1:length(m)] == [mean(D), var(D), skewness(D)]
-    m = moments(D, Val(2))
-    @test [m[i] for i in 1:length(m)] == [mean(D), var(D)]
-    m = moments(D, Val(1))
-    @test [m[i] for i in 1:length(m)] == [mean(D)]
-    m = moments(D, Val(0))
-    @test [m[i] for i in 1:length(m)] == []
+d = Normal(2,5)
+function testMoments(d)
+    m = moments(d, Val(4))
+    @test [m[i] for i in 1:n_moments(m)] == [mean(d), var(d), skewness(d), kurtosis(d)]
+    m = moments(d, Val(3))
+    @test [m[i] for i in 1:n_moments(m)] == [mean(d), var(d), skewness(d)]
+    m = moments(d, Val(2))
+    @test [m[i] for i in 1:n_moments(m)] == [mean(d), var(d)]
+    m = moments(d, Val(1))
+    @test [m[i] for i in 1:n_moments(m)] == [mean(d)]
+    m = moments(d, Val(0))
+    @test [m[i] for i in 1:n_moments(m)] == []
 end
-testMoments(D)
+testMoments(d)
 testMoments(LogNormal(2,5))
+# mean not defined fro LogitNormal
+@test_throws MethodError testMoments(LogitNormal(2,5))
 
 
 # distribution parameters from moments
@@ -82,77 +84,86 @@ qp3 = QuantilePoint(qp1, q = 3);
 #println("fitting normal")
 qpl = @qp_m(3)
 qpu = @qp_u(5)
-DN = fit(Normal, qpl, qpu)
-@test quantile.(DN, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
-DN = fit(Normal, qpu, qpl) # sort
-@test quantile.(DN, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+dn = fit(Normal, qpl, qpu)
+@test quantile.(dn, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+dn = fit(Normal, qpu, qpl) # sort
+@test quantile.(dn, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
 
 #println("fitting lognormal")
-D = fit(LogNormal, qpl, qpu);
-@test quantile.(D, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
-D = fit(LogNormal, qpu, qpl) # sort
-@test quantile.(D, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+d = fit(LogNormal, qpl, qpu);
+@test quantile.(d, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
+d = fit(LogNormal, qpu, qpl) # sort
+@test quantile.(d, [qpl.p, qpu.p]) ≈ [qpl.q, qpu.q]
 
 #println("Approximate Normal by lognormal")
-D = fit(LogNormal, moments(DN));
-@test mean(D) == mean(DN) && var(D) == var(DN)
+d = fit(LogNormal, moments(dn));
+@test mean(d) == mean(dn) && var(d) == var(dn)
 
 if (false) # only interactively
     using StatsPlots
-    plot(D); 
-    plot!(DN, linetype = :line)
-    vline!([mean(D)])
+    plot(d); 
+    plot!(dn, linetype = :line)
+    vline!([mean(d)])
 end
 
 
 #println("fit to quantilePoint and mean")
-D = LogNormal(1,1)
-m = log(mean(D))
+d = LogNormal(1,1)
+m = log(mean(d))
 #@macroexpand @qp(0.95,quantile(D,0.95))
-qp = @qp(0.95,quantile(D,0.95))
-Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
-@test Df ≈ D
-Df = fit(LogNormal, mean(D), qp, Val(:mean))
-@test Df ≈ D
+qp = @qp(0.95,quantile(d,0.95))
+dfit = LogNormals.fit_mean_quantile(LogNormal, mean(d), qp)
+@test dfit ≈ d
+dfit = fit(LogNormal, mean(d), qp, Val(:mean))
+@test dfit ≈ d
 # with lower quantile
-qp = @qp(0.05,quantile(D,0.05))
-Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
-@test Df ≈ D
+qp = @qp(0.05,quantile(d,0.05))
+dfit = LogNormals.fit_mean_quantile(LogNormal, mean(d), qp)
+@test dfit ≈ d
 # very close to mean can give very different results:
-qp = @qp(0.95,mean(D)-1e-4)
-Df = LogNormals._fit_mean_quantile(LogNormal, mean(D), qp)
-@test mean(Df) ≈ mean(D) && quantile(Df, qp.p) ≈ qp.q
+qp = @qp(0.95,mean(d)-1e-4)
+dfit = LogNormals.fit_mean_quantile(LogNormal, mean(d), qp)
+@test mean(dfit) ≈ mean(d) && quantile(dfit, qp.p) ≈ qp.q
 if (false) # only interactively
     using StatsPlots
-    plot(D); plot!(Df, linetype = :line)
-    vline!([mean(D)])
+    plot(d); plot!(dfit, linetype = :line)
+    vline!([mean(d)])
 end
 
 #println("fit to quantilePoint and mode")
-D = LogNormal(1,1)
-m = log(mode(D))
+d = LogNormal(1,1)
+m = log(mode(d))
 #@macroexpand @qp(0.95,quantile(D,0.95))
-qp = @qp(0.95,quantile(D,0.95))
-Df = LogNormals._fit_mode_quantile(LogNormal, mode(D), qp)
-@test Df ≈ D
-Df = fit(LogNormal, mode(D), qp, Val(:mode))
-@test Df ≈ D
+qp = @qp(0.95,quantile(d,0.95))
+dfit = LogNormals.fit_mode_quantile(LogNormal, mode(d), qp)
+@test dfit ≈ d
+dfit = fit(LogNormal, mode(d), qp, Val(:mode))
+@test dfit ≈ d
 # with lower quantile
-qp = @qp(0.025,quantile(D,0.025))
-Df = LogNormals._fit_mode_quantile(LogNormal, mode(D), qp)
-@test mode(Df) ≈ mode(D) && quantile(Df, qp.p) ≈ qp.q
+qp = @qp(0.025,quantile(d,0.025))
+dfit = LogNormals.fit_mode_quantile(LogNormal, mode(d), qp)
+@test mode(dfit) ≈ mode(d) && quantile(dfit, qp.p) ≈ qp.q
 if (false) # only interactively
     using StatsPlots
-    plot(D); plot!(Df, linetype = :line, xlim=(0,quantile(D, 0.975)))
-    vline!([mode(D), mode(Df)])
+    plot(d); plot!(dfit, linetype = :line, xlim=(0,quantile(d, 0.975)))
+    vline!([mode(d), mode(dfit)])
 end
 
 #println("fit to quantilePoint and median")
-D = LogNormal(1,1)
-qp = @qp(0.95,quantile(D,0.95))
-Df = fit(LogNormal, median(D), qp, Val(:median))
-@test Df ≈ D
+d = LogNormal(1,1)
+qp = @qp(0.95,quantile(d,0.95))
+dfit = fit(LogNormal, median(d), qp, Val(:median))
+@test dfit ≈ d
 
+# Normal
+d = Normal(3,2)
+dfit = fit(Normal, moments(d))
+@test dfit ≈ d
+qp = @qp(0.95,quantile(d,0.95))
+dfit = fit(Normal, median(d), qp, Val(:median))
+@test dfit ≈ d
+dfit = fit(Normal, mode(d), qp, Val(:mode))
+@test dfit ≈ d
 
 
 

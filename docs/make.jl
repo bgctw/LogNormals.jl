@@ -1,11 +1,13 @@
 using Documenter
-using LogNormals
+using LogNormals, Distributions
 
 push!(LOAD_PATH,"../src/")
-makedocs(sitename="LogNormals.jl Documentation",
+makedocs(sitename="LogNormals.jl",
          pages = [
-            "Index" => "index.md",
-            "An other page" => "anotherPage.md",
+            "Home" => "index.md",
+            "Fit to statistic" => "fitstats.md",
+            "Sum LogNormals" => "sumlognormals.md",
+            #"misc" => "misc.md",
          ],
          format = Documenter.HTML(prettyurls = false)
 )

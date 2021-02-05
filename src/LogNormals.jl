@@ -1,245 +1,30 @@
+"""
+    Helpers to fit LogNormal distributions.
+"""
 module LogNormals
 
-export AbstractMoments, Moments, QuantilePoint, moments,
+export AbstractMoments, Moments, n_moments, moments,
+    QuantilePoint, fit_mean_quantile, fit_mode_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95
 
 
 using Distributions, StaticArrays
 
+# general fitting to statistics
+include("fitstats.jl")
 
-"""
-    AbstractMoments
+# lognormal fitting
+include("lognormal.jl")
 
-A representation of statistical moments of a distribution
+# normal fitting
+include("normal.jl")
 
-The following functions are supported
-- length(M::AbstractMoments): get the number of defined moments
+# logitnormal fitting
+include("logitnormal.jl")
 
-The following getters return a single moment or 
-throw an error if the moment has not been defined
-- mean(M::AbstractMoments): get the mean
-- var(M::AbstractMoments): get the variance
-- skewness(M::AbstractMoments): get the variance
-- kurtosis(M::AbstractMoments): get the variance
-- getindex(M::AbstractMoments,i): get the ith moment, i.e. indexing m[i]
+# sum of lognormal random variables
+include("sumlognormals.jl")
 
-The basic implementation 'Moments' is immutable and
-convert(AbstractArray, M::Moments) returns an SArray{N,T}
-
-# Examples
-```julia
-M = Moments(1,0.2)
-length(M) == 2
-var(M) == M[2]
-ismissing(kurtosis(M))
-typeof(convert(AbstractArray,M)) <: AbstractArray
-```
-"""
-abstract type AbstractMoments{N} end
-Base.length(::Type{<:AbstractMoments{N}}) where N = N
-Base.length(M::AbstractMoments{N}) where N = N
-Distributions.mean(M::AbstractMoments) = length(M) >= 1 ? M[1] : 
-    error("mean not defined")
-Distributions.var(M::AbstractMoments) = length(M) >= 2 ? M[2] : 
-    error("variance not defined")
-Distributions.std(M::AbstractMoments) = length(M) >= 2 ? sqrt(M[2]) : 
-    error("std not defined")
-Distributions.skewness(M::AbstractMoments) = length(M) >= 3 ? M[3] : 
-    error("skewness not defined")
-Distributions.kurtosis(M::AbstractMoments) = length(M) >= 4 ? M[4] : 
-    error("kurosis not defined")
-
-struct Moments{N,T} <: AbstractMoments{N}
-    all::SVector{N,T}
-end
-Moments(x...) = Moments(SVector{length(x)}(promote(x...)))
-Moments() = Moments(SA[])
-Base.getindex(M::Moments, i) = length(M) >= i ? M.all[i] : 
-    error("$(i)th moment not defined.")
-Base.convert(::Type{AbstractArray}, M::Moments) = M.all
-
-function moments(D::LogNormal, ::Val{N} = Val(3)) where N 
-    N > 4 && error("getting moments above 4 not yet implemented.")
-    N == 4 && return(Moments(mean(D), var(D), skewness(D), kurtosis(D)))
-    N == 3 && return(Moments(mean(D), var(D), skewness(D)))
-    N == 2 && return(Moments(mean(D), var(D)))
-    N == 1 && return(Moments(mean(D)))
-    N == 0 && return(Moments())
-end
-
-function moments(D::Normal, ::Val{N} = Val(3)) where N 
-    N > 4 && error("getting moments above 4 not yet implemented.")
-    N == 4 && return(Moments(mean(D), var(D), skewness(D), kurtosis(D)))
-    N == 3 && return(Moments(mean(D), var(D), skewness(D)))
-    N == 2 && return(Moments(mean(D), var(D)))
-    N == 1 && return(Moments(mean(D)))
-    N == 0 && return(Moments())
-end
-
-"""
-    fit(Distribution, m::Moments)
-    
-Fit a statistical distribution to its moments 
-
-# Arguments
-- `Distribution`: The type of distribution to fit
-- `m`: The moments of the distribution
-
-# Notes
-This can be used to approximate one distribution by another
-
-# Examples
-```julia
-D = fit(LogNormal, Moments(3.2,4.6))
-D = fit(LogNormal, moments(Normal(3,1)))
-plot(D); lines(!Normal(3,1))
-```
-"""
-function Distributions.fit(::Type{LogNormal}, m::AbstractMoments)
-    # https://en.wikipedia.org/wiki/Log-normal_distribution
-    length(m) >= 2 || error("Need mean and variance to estimate lognormal")
-    γ = 1+var(m)/mean(m)^2
-    μ = log(mean(m)/sqrt(γ))
-    σ = sqrt(log(γ))
-    return LogNormal(μ,σ)
-end
-
-struct QuantilePoint
-    p
-    q
-    QuantilePoint(p,q) = 0 < p < 1 ? new(p,q) : 
-        error("p must be in (0,1)")
-end
-QuantilePoint(qp::QuantilePoint; p = qp.p, q = qp.q) = QuantilePoint(p,q)
-Base.show(io::IO, qp::QuantilePoint) = print(io, "(p=$(qp.p),q=$(qp.q))")
-function Base.isless(x::QuantilePoint,y::QuantilePoint)
-    is_equal_q = (x.q == y.q)
-    ((x.p == y.p) && !is_equal_q) && error("incompatible QuantilePoints: $x,$y")
-    isless = (x.q < y.q)
-    # for different p, q needs to be different
-    (isless && (x.p > y.p)) && error("incompatible QuantilePoints: $(x),$(y)")
-    (!isless && !is_equal_q && (x.p < y.p))  && error("incompatible QuantilePoints: $x,$y")
-    return(isless)
-end
-
-macro qp(p,q) :(QuantilePoint($(esc(p)), $(esc(q)))) end
-macro qp_ll(q0_025) :(QuantilePoint(0.025, $(esc(q0_025)))) end
-macro qp_l(q0_05) :(QuantilePoint(0.05, $(esc(q0_05)))) end
-macro qp_m(median) :(QuantilePoint(0.5, $(esc(median)))) end
-macro qp_u(q0_95) :(QuantilePoint(0.95, $(esc(q0_95)))) end
-macro qp_uu(q0_975) :(QuantilePoint(0.975, $(esc(q0_975)))) end
-
-macro qs_cf90(q0_05,q0_95) 
-    :(Set([QuantilePoint(0.05,$(esc(q0_05))),QuantilePoint(0.95,$(esc(q0_95)))])) end
-macro qs_cf95(q0_025,q0_975) 
-    :(Set([QuantilePoint(0.025,$(esc(q0_025))),QuantilePoint(0.975,$(esc(q0_975)))])) end    
-
-"""
-fit(Distribution, lower::QuantilePoint, upper::QuantilePoint)
-
-Fit a statistical distribution to a set of quantiles 
-
-# Arguments
-- `Distribution`: The type of distribution to fit
-- `lower`:  lower QuantilePoint (p,q)
-- `upper`:  upper QuantilePoint (p,q)
-
-# Notes
-Several macros help to construct QuantilePoints
-@qp(p,q)       QuantilePoint(p, q)
-@qp_ll(q0_025) quantile at very low p = 0.025 
-@qp_l(q0_05)   quantile at low p = 0.05 
-@qp_m(median)  quantile at median: p = 0.5 
-@qp_u(q0_95)   quantile at high p = 0.95 
-@qp_uu(q0_975) quantile at very high p = 0.975 
-
-# Examples
-```julia
-DN = fit(Normal, @qp_m(3), @qp_uu(5))
-D = fit(LogNormal, @qp_m(3), @qp_uu(5))
-quantile.(D, [0.5, 0.975]) ≈ [3,5]
-```
-"""
-function Distributions.fit(::Type{LogNormal}, lower::QuantilePoint, upper::QuantilePoint)
-    #length(qset) == 2 || error("only implemented yet for exactly two quantiles.")
-    #qset_log = [QuantilePoint(qp, q = log(qp.q)) for qp in qset]
-    lower_log = QuantilePoint(lower, q = log(lower.q))
-    upper_log = QuantilePoint(upper, q = log(upper.q))
-    DN = fit(Normal, lower_log, upper_log)
-    LogNormal(params(DN)...)
-end
-
-function Distributions.fit(::Type{Normal}, lower::QuantilePoint, upper::QuantilePoint)
-    # https://www.johndcook.com/quantiles_parameters.pdf
-    if (upper < lower) 
-        lower,upper = (upper,lower)
-    end
-    qz1 = quantile(Normal(), lower.p)
-    qz2 = quantile(Normal(), upper.p)
-    dqz = (qz2 - qz1)
-    σ = (upper.q - lower.q)/dqz
-    μ = (lower.q*qz2 - upper.q*qz1)/dqz
-    Normal(μ,σ)
-end
-
-"""
-    fit(Distribution, val::Real, qp::QuantilePoint, ::Val{stats} = Val(:mean))
-
-Fit a statistical distribution to a quantile and given statistics
-
-# Arguments
-- `Distribution`: The type of distribution to fit
-- `val`: The value of statistics
-- `qp`: QuantilePoint(p,q)
- `stats` Which statistics to fit: defaults to `Val(:mean)`. 
-   Alternatives are: `Val(:mode)`, `Val(:median)`
-
-# Examples
-```julia
-D = fit(LogNormal, 5, @qp_uu(14))
-mean(D) ≈ 5 && quantile(D, 0.975) 
-D = fit(LogNormal, 5, @qp_uu(14), Val(:mode))
-mode(D) ≈ 5 && quantile(D, 0.975) 
-```
-"""
-function Distributions.fit(DT::Type{<:Distribution}, val::Real, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where stats
-    stats == :mean && return(_fit_mean_quantile(DT, val, qp))
-    stats == :mode && return(_fit_mode_quantile(DT, val, qp))
-    stats == :median && return(fit(DT, @qp_m(val), qp))
-    error("unknown stats: $stats")
-end
-
-
-function _fit_mean_quantile(::Type{LogNormal}, mean::Real, qp::QuantilePoint)
-    # solution of
-    # (1) mean = exp(mu + sigma^2/2)
-    # (2) upper = mu + sigmaFac sigma
-    # see R packaage lognorm inst/doc/coefLognorm.Rmd for derivation
-    sigmaFac = quantile(Normal(),qp.p)
-    m = log(mean)
-    discr = sigmaFac^2 - 2*(log(qp.q) - m)
-    (discr > 0) || error("Cannot fit LogNormal with quantile $(qp) and mean $(mean).")
-    sigma = sigmaFac > sqrt(discr) ? (sigmaFac - sqrt(discr)) : sigmaFac + sqrt(discr)
-    mu = m - sigma^2/2
-    LogNormal(mu, sigma)
-end
-
-function _fit_mode_quantile(::Type{LogNormal}, mode::Real, qp::QuantilePoint)
-    # solution of
-    # (1) mle = exp(mu - sigma^2)
-    # (2) upper = mu + sigmaFac sigma
-    # see R packaage lognorm inst/doc/coefLognorm.Rmd for derivation
-    sigmaFac = quantile(Normal(),qp.p)
-    m = log(mode)
-    discr = sigmaFac^2/4 + (log(qp.q) - m)
-    (discr > 0) || error("Cannot fit LogNormal with quantile $(qp) and mode $(mode).")
-    root_discr = sqrt(discr)
-    mfh = -sigmaFac/2
-    sigma = mfh > root_discr ? (mfh - root_discr) : (mfh + root_discr)
-    #sigma = mfh + root_discr
-    mu = m + sigma^2
-    LogNormal(mu, sigma)
-end
     
 end # module
