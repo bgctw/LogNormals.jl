@@ -16,6 +16,7 @@ DocTestSetup = :(using Pkg; Pkg.add("Distributions"); using Statistics,Distribut
 ```jldoctest
 m = Moments(1,0.2)
 n_moments(m) == 2, var(m) == m[2]
+using Pkg; Pkg.status()
 # output
 (true, true)
 ```

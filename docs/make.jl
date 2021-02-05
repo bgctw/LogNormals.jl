@@ -1,6 +1,8 @@
 using Documenter
 using LogNormals, Distributions
 
+using Pkg; Pkg.status()
+
 push!(LOAD_PATH,"../src/")
 #DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
 DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Pkg; Pkg.add("Distributions"); using Statistics,Distributions,LogNormals); recursive=true)
