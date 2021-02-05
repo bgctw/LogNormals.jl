@@ -1,4 +1,4 @@
-using Test, Distributions, LogNormals 
+using Test, Documenter, Distributions, LogNormals 
 
 # two moments
 m = Moments(1,0.5)
@@ -165,6 +165,9 @@ dfit = fit(Normal, median(d), qp, Val(:median))
 dfit = fit(Normal, mode(d), qp, Val(:mode))
 @test dfit ≈ d
 
-
+# testing examples
+# make sure to not test for error. This does not work in test, because error compromises former output
+DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
+doctest(LogNormals)
 
 
