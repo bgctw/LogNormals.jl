@@ -4,7 +4,7 @@ This package provides method to fit a distribution to a given
 set of aggregate statistics.
 
 ```@meta
-DocTestSetup = :(using Statistics,Distributions,LogNormals)
+DocTestSetup = :(using Pkg; Pkg.add("Distributions"); using Statistics,Distributions,LogNormals)
 ```
 ```jldoctest; output = false
 # to specified moments

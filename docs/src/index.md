@@ -10,7 +10,7 @@ see the [github repository](https://github.com/bgctw/LogNormals.jl).
 
 
 ```@meta
-DocTestSetup = :(using Statistics,Distributions,LogNormals)
+DocTestSetup = :(using Pkg; Pkg.add("Distributions"); using Statistics,Distributions,LogNormals)
 ```
 
 ```jldoctest

@@ -83,6 +83,11 @@ qp3 = QuantilePoint(qp1, q = 3);
 @test @qs_cf90(0.2,0.7) == Set([@qp_l(0.2),@qp_u(0.7)])
 @test @qs_cf95(0.2,0.7) == Set([@qp_ll(0.2),@qp_uu(0.7)])
 
+#println("unknown Distribution")
+@test isnothing(fit(Distribution, m))
+qpl = @qp_m(3)
+qpu = @qp_u(5)
+@test isnothing(fit(Distribution, qpl, qpu))
 
 #println("fitting normal")
 qpl = @qp_m(3)
@@ -169,6 +174,7 @@ dfit = fit(Normal, mean(d), qp, Val(:mean))
 @test dfit ≈ d
 dfit = fit(Normal, mode(d), qp, Val(:mode))
 @test dfit ≈ d
+@test_throws Exception fit(Normal, mode(d), qp, Val(:bla))
 
 # testing examples
 # make sure to not test for error. This does not work in test, because error compromises former output
