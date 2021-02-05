@@ -98,7 +98,11 @@ This can be used to approximate one distribution by another.
 
 See also [`AbstractMoments`](@ref), [`moments`](@ref). 
 
+
 # Examples
+```@meta
+DocTestSetup = :(using Statistics,Distributions,LogNormals)
+```
 ```jldoctest fm1; output = false
 D = fit(LogNormal, Moments(3.2,4.6));
 (mean(D), var(D)) .≈ (3.2,4.6)
