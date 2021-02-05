@@ -3,10 +3,8 @@ using LogNormals, Distributions
 
 push!(LOAD_PATH,"../src/")
 # need to add Statistics and Distributions to Project.toml in docs/
-DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
-DocMeta.setdocmeta!(Distributions, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
-#DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Pkg; Pkg.add("Distributions"); using Statistics,Distributions,LogNormals); recursive=true)
-#DocMeta.setdocmeta!(LogNormals, :DocTestFilters, :(using Distributions,LogNormals); recursive=true)
+#DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
+#DocMeta.setdocmeta!(Distributions, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
 makedocs(sitename="LogNormals.jl",
          pages = [
             "Home" => "index.md",
