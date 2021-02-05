@@ -168,6 +168,6 @@ dfit = fit(Normal, mode(d), qp, Val(:mode))
 # testing examples
 # make sure to not test for error. This does not work in test, because error compromises former output
 DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
-doctest(LogNormals)
+doctest(LogNormals, manual = false)
 
 

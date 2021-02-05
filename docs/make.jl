@@ -2,6 +2,7 @@ using Documenter
 using LogNormals, Distributions
 
 push!(LOAD_PATH,"../src/")
+DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Distributions,LogNormals); recursive=true)
 makedocs(sitename="LogNormals.jl",
          pages = [
             "Home" => "index.md",
