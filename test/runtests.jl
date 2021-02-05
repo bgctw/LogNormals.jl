@@ -10,6 +10,7 @@ m = Moments(1,0.5)
 @test std(m) == sqrt(0.5)
 @test_throws Exception skewness(m)
 @test_throws Exception kurtosis(m)
+@test convert(AbstractArray, m) == [1.0, 0.5]
 
 # no moments
 m = Moments()
@@ -30,6 +31,8 @@ function testMoments(d)
     @test [m[i] for i in 1:n_moments(m)] == [mean(d)]
     m = moments(d, Val(0))
     @test [m[i] for i in 1:n_moments(m)] == []
+    @test_throws Exception moments(d, Val(-1))
+    @test_throws Exception moments(d, Val(:bla))
 end
 testMoments(d)
 testMoments(LogNormal(2,5))
@@ -161,6 +164,8 @@ dfit = fit(Normal, moments(d))
 @test dfit ≈ d
 qp = @qp(0.95,quantile(d,0.95))
 dfit = fit(Normal, median(d), qp, Val(:median))
+@test dfit ≈ d
+dfit = fit(Normal, mean(d), qp, Val(:mean))
 @test dfit ≈ d
 dfit = fit(Normal, mode(d), qp, Val(:mode))
 @test dfit ≈ d

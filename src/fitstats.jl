@@ -74,13 +74,14 @@ Moments{2,Float64}([0.0, 1.0])
 ```
 """
 function moments(d::Distribution, ::Val{N} = Val(2)) where N 
-    N > 4 && error("getting moments above 4 not yet implemented for distribution $(typeof(d)).")
+    typeof(N) <: Integer || error("N must be a positive Integer")
+    N > 4 && error("Getting moments above 4 not yet implemented for distribution $(typeof(d)).")
     N == 4 && return(Moments(mean(d), var(d), skewness(d), kurtosis(d)))
     N == 3 && return(Moments(mean(d), var(d), skewness(d)))
     N == 2 && return(Moments(mean(d), var(d)))
     N == 1 && return(Moments(mean(d)))
     N == 0 && return(Moments())
-    error("must provide a positive N")
+    error("N must be a positive Integer.")
 end
 
 """
