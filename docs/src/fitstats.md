@@ -34,7 +34,7 @@ d = fit(LogNormal, moments(dn))
 ## Fit to statistical moments
 
 ```@docs
-Distributions.fit(::Type{<:Distribution}, m::AbstractMoments)
+Distributions.fit(::Type{D}, ::AbstractMoments) where {D<:Distribution}
 ```
 
 ```@docs
@@ -50,13 +50,13 @@ The syntax `Moments(mean,var)` produces an object of type `Moments <: AbstractMo
 ## Fit to several quantile points
 
 ```@docs
-Distributions.fit(::Type{<:Distribution}, lower::QuantilePoint, upper::QuantilePoint)
+Distributions.fit(::Type{D}, ::QuantilePoint, ::QuantilePoint) where {D<:Distribution}
 ```
 
 ## Fit to mean,mode,median and a quantile point
 
 ```@docs
-Distributions.fit(D::Type{<:Distribution}, val, qp::QuantilePoint, ::Val{stats}) where stats
+Distributions.fit(::Type{D}, ::Any, ::QuantilePoint, ::Val{stats}) where {D<:Distribution, stats}
 ```
 
 

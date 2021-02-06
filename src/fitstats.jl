@@ -31,7 +31,7 @@ kurtosis(m) # throws error because its above 2nd moment
 """
 abstract type AbstractMoments{N} end
 n_moments(::Type{<:AbstractMoments{N}}) where N = N
-n_moments(m::AbstractMoments{N}) where N = N
+n_moments(m::AbstractMoments{N}) where {N <: Integer} = N
 Distributions.mean(m::AbstractMoments) = n_moments(m) >= 1 ? m[1] : 
     error("mean not recorded")
 Distributions.var(m::AbstractMoments) = n_moments(m) >= 2 ? m[2] : 
