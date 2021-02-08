@@ -16,8 +16,10 @@ function Distributions.fit(::Type{Normal}, lower::QuantilePoint, upper::Quantile
     Normal(μ,σ)
 end
 
-fit_mean_quantile(D::Type{Normal}, mean::Real, qp::QuantilePoint) = 
+fit_mean_quantile(D::Type{Normal}, mean, qp::QuantilePoint) = 
     fit(D, QuantilePoint(0.5, mean), qp)
 
-fit_mode_quantile(D::Type{Normal}, mode::Real, qp::QuantilePoint) = 
+fit_mode_quantile(D::Type{Normal}, mode, qp::QuantilePoint) = 
     fit(D, QuantilePoint(0.5, mode), qp)
+
+

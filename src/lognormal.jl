@@ -16,7 +16,7 @@ function Distributions.fit(::Type{LogNormal}, lower::QuantilePoint, upper::Quant
     LogNormal(params(DN)...)
 end
 
-function fit_mean_quantile(::Type{LogNormal}, mean::Real, qp::QuantilePoint)
+function fit_mean_quantile(::Type{LogNormal}, mean, qp::QuantilePoint)
     # solution of
     # (1) mean = exp(mu + sigma^2/2)
     # (2) upper = mu + sigmaFac sigma
@@ -30,7 +30,7 @@ function fit_mean_quantile(::Type{LogNormal}, mean::Real, qp::QuantilePoint)
     LogNormal(mu, sigma)
 end
 
-function fit_mode_quantile(::Type{LogNormal}, mode::Real, qp::QuantilePoint)
+function fit_mode_quantile(::Type{LogNormal}, mode, qp::QuantilePoint)
     # solution of
     # (1) mle = exp(mu - sigma^2)
     # (2) upper = mu + sigmaFac sigma

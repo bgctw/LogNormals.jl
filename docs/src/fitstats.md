@@ -59,4 +59,29 @@ Distributions.fit(::Type{D}, ::QuantilePoint, ::QuantilePoint) where {D<:Distrib
 Distributions.fit(::Type{D}, ::Any, ::QuantilePoint, ::Val{stats}) where {D<:Distribution, stats}
 ```
 
+## Implementing support for another distribution
+
+In order to use the fitting framework for a distribution `MyDist`, one needs to implement the following four methods.
+
+```julia
+Distributions.fit(::Type{MyDist}, m::AbstractMoments)
+
+fit_mean_quantile(::Type{MyDist}, mean, qp::QuantilePoint)
+
+fit_mode_quantile(::Type{MyDist}, mode, qp::QuantilePoint)
+
+Distributions.fit(::Type{MyDist}, lower::QuantilePoint, upper::QuantilePoint)
+```
+
+The default method for `fit` with `stats = :median` already works based on the methods for two quantile points.
+If the general method on two quantile points cannot be specified, one can alternatively implement method:
+
+```julia
+fit_median_quantile(::Type{MyDist}, median, qp::QuantilePoint)
+```
+
+
+
+
+
 

@@ -178,6 +178,10 @@ true
 Distributions.fit(::Type{D}, lower::QuantilePoint, upper::QuantilePoint) where D<:Distribution =
     error("fitting to two quantile points not implemented for distribution of type $D")
 
+fit_median_quantile(D::Type{DT}, median, qp::QuantilePoint) where {DT <: Distribution} = 
+    return(fit(D, @qp_m(median), qp))
+
+
 
 """
     fit(D, val, qp, ::Val{stats} = Val(:mean))
@@ -208,8 +212,9 @@ d = fit(LogNormal, 5, @qp_uu(14), Val(:mode));
 function Distributions.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where {D<:Distribution, stats}
     stats == :mean && return(fit_mean_quantile(D, val, qp))
     stats == :mode && return(fit_mode_quantile(D, val, qp))
-    stats == :median && return(fit(D, @qp_m(val), qp))
+    stats == :median && return(fit_median_quantile(D, val, qp))
     error("unknown stats: $stats")
 end
+
 
 
