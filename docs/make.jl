@@ -8,6 +8,7 @@ push!(LOAD_PATH,"../src/")
 makedocs(sitename="LogNormals.jl",
          pages = [
             "Home" => "index.md",
+            "LogNormal properties" => "lognormalprops.md",
             "Fit to statistic" => "fitstats.md",
             "Sum LogNormals" => "sumlognormals.md",
          ],

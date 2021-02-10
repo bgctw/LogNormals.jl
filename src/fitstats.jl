@@ -97,19 +97,19 @@ See also [`AbstractMoments`](@ref), [`moments`](@ref).
 
 # Examples
 ```jldoctest fm1; output = false, setup = :(using Statistics,Distributions,LogNormals)
-D = fit(LogNormal, Moments(3.2,4.6));
-(mean(D), var(D)) .≈ (3.2,4.6)
+d = fit(LogNormal, Moments(3.2,4.6));
+(mean(d), var(d)) .≈ (3.2,4.6)
 # output
 (true, true)
 ```
 ```jldoctest fm1; output = false, setup = :(using Statistics,Distributions,LogNormals)
-D = fit(LogNormal, moments(Normal(3,1.2)));
-(mean(D), std(D)) .≈ (3,1.2)
+d = fit(LogNormal, moments(Normal(3,1.2)));
+(mean(d), std(d)) .≈ (3,1.2)
 # output
 (true, true)
 ```
 ```julia
-plot(D); lines(!Normal(3,1.2))
+plot(d); lines(!Normal(3,1.2))
 ```
 """
 Distributions.fit(::Type{D}, m::AbstractMoments) where {D<:Distribution} = 

@@ -3,10 +3,14 @@ using Test
 using Distributions, LogNormals 
 
 include("fitstats.jl")
+
 include("normal.jl")
 include("lognormal.jl")
 include("normal.jl")
 include("logitnormal.jl")
+
+include("sumlognormals.jl")
+
 
 
 # TODO move to documentation

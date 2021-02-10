@@ -1,3 +1,12 @@
+using Test, Distributions, LogNormals
+
+@testset "LogNormal properties" begin
+    @testset "σstar" begin
+        d = LogNormal(1,2)    
+        @test σstar(d) == exp(2)
+    end;
+end;
+
 @testset "LogNormal fit to stats" begin
     @testset "fit moments" begin
         D = LogNormal(1,0.6)
@@ -50,6 +59,15 @@
         qp = @qp(0.95,quantile(d,0.95))
         dfit = fit(LogNormal, median(d), qp, Val(:median))
         @test dfit ≈ d
+    end;
+    @testset "Σstar" begin
+        ss = Σstar(4.5)
+        @test ss() == 4.5
+    end;
+    @testset "fit to mean and Σstar" begin
+        d = LogNormal(1, log(1.2))
+        dfit = fit(LogNormal, mean(d), Σstar(1.2))
+        @test d == dfit
     end;
 end;
 

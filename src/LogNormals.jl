@@ -7,13 +7,14 @@ Tools that help using the LogNormal distribution.
 module LogNormals
 
 export AbstractMoments, Moments, n_moments, moments,
-    QuantilePoint, 
+    QuantilePoint, Σstar, σstar,
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
-    @qs_cf90, @qs_cf95
+    @qs_cf90, @qs_cf95,
+    sum_lognormals
 
 
-using Distributions, StaticArrays
+using Distributions, StaticArrays, LinearAlgebra, Missings
 
 # general fitting to statistics
 include("fitstats.jl")

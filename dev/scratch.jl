@@ -39,9 +39,6 @@ end
 
 mult_std(D::LogNormal) = exp(params(D)[2])
 
-D = fit(LogNormal; mean = 4, mult_std = exp(1))
-exp(params(D)[2])
-
 @test mean(D) ≈ 4 && mult_std(D) ≈ exp(1)
 
 
@@ -73,3 +70,19 @@ end
 occursin.(r"^((?!true|\(true).)*$",["true", "(true, true)", "not true", "other", ""])
 # true or (true at the beginning
 occursin.(r"^(?!true|\(true).",["true", "(true, true)", "not true", "other", ""])
+
+
+function experimentAR1()
+    using StatsBase
+    # generate autocorrelated time series
+    using ARFIMA
+    N, σ = 1_000, 0.5
+    x = arfima(N, σ, nothing, SVector(0.6))
+    # re-estimate autocorrelation
+    autocor(x, 1:10)
+end
+
+d = LogNormal(log(2), log(1.2))
+σstar(d) == 1.2
+d = fit(LogNormal, 2, Σstar(1.2))
+(mean(d), σstar(d)) == (2, 1.2)  
