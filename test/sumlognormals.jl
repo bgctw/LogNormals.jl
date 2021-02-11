@@ -12,21 +12,23 @@ end
     ds = ds1 = DistributionSequence(LogNormal, transpose(hcat(mu, sigma)))
     # must be of type Distribution
     @test_throws Exception DistributionSequence(String, hcat(mu, sigma))
-    @test eltype(ds) == LogNormal
-    @test eltype(typeof(ds)) == LogNormal
+    @test eltype(ds) == Union{Missing,LogNormal}
     #params(ds)
     #params(ds)[:,2]
     @test ds[2] == LogNormal(1.2, 1.02)
     dsa = collect(ds)
-    @test typeof(dsa) == Array{LogNormal,1}
     @test @inferred length(dsa) == 3
+    @test dsa[2] == LogNormal(1.2, 1.02)
+    dsrv = collect(Iterators.reverse(ds))
+    @test dsrv[3] == LogNormal(1.1, 1.01)
+    #@test @inferred params(ds,2) == [1.2, 1.02]
     @testset "constructor with several Distributions" begin
         d1 = LogNormal(log(110), 0.25)
         d2 = LogNormal(log(100), 0.15)
         ds = DistributionSequence(d1, d2);
         @test @inferred Missing ds[1] == d1
         # empty not allowed
-        @test_throws ErrorException DistributionSequence()
+        @test_throws Exception DistributionSequence()
         # different types not allowed
         @test_throws MethodError DistributionSequence(d1, d2, Normal());
         # with missing 
@@ -35,27 +37,35 @@ end
     end;
     @testset "constructor with parameter vectors" begin
         ds2 = DistributionSequence(LogNormal, mu, sigma)
-        @test params(ds2) == params(ds1)
+        @test ds2.params == ds1.params
+        bn = [1,1]
+        bp = [0.5, 0.7]
+        dsb = DistributionSequence(LogNormal, bn, bp)
     end
     @testset "missings" begin
         mu = [1.1,1.2,missing]
         sigma = [1.01, 1.02, 1.03]
         dsm = DistributionSequence(LogNormal, transpose(hcat(mu, sigma)))
-        @test eltype(dsm) == LogNormal
+        @test eltype(dsm) == Union{Missing,LogNormal}
         # if (false)
         #     @code_warntype(length(dsm))
-        #     @code_warntype(params(dsm))
         #     @code_warntype(dsm[2])
         # end
         @test @inferred length(dsm) == 3
         @test @inferred Missing dsm[2] == LogNormal(1.2, 1.02)
         @test ismissing(dsm[3])
         dsm2 = DistributionSequence(LogNormal, mu, sigma)
-        @test coalesce.(params(dsm2),0815) == coalesce.(params(dsm), 0815)
+        @test coalesce.(dsm2.params,0815) == coalesce.(dsm.params, 0815)
+    end
+    @testset "explicit specification of Npar" begin
+        db1 = Binomial()
+        db2 = Binomial(1,0.7)
+        @test_throws MethodError ds2 = DistributionSequence(db1, db2) #nparams not defined
+        ds2 = @inferred DistributionSequence(db1, db2, npar=Val(2)) 
     end
 end;
 
-@testset "two vars" begin
+@testset "two vars uncorrelated" begin
     # generate nSample values of two lognormal random variables
     d1 = LogNormal(log(110), 0.25)
     d2 = LogNormal(log(100), 0.15)
@@ -63,13 +73,13 @@ end;
     dsum = sum(ds)
     @testset "no missings" begin
         @test params(dsum)[1] ≈ log(210) rtol = 0.02 
-        # regression to previous result checked with random numbers belowq
+        # regression to previous result checked with random numbers below
         @test exp(params(dsum)[2]) ≈ 1.16087 rtol = 0.02
     end;
     @testset "with missings" begin
         ds = DistributionSequence(d1, missing);
-        length_itr(skipmissing(ds))
-        @test_throws Exception dsum2 = sum(ds)
+        @test coalesce.(collect(ds), LogNormal()) == [d1, LogNormal()]
+        @test_throws Exception dsum2 = sum(ds) # without skipmissings
         dsum2 = sum(skipmissing(ds))
         @test dsum2 == d1
         dsum3 = sum(ds; skipmissings = Val(true))
@@ -77,61 +87,43 @@ end;
     end
 end;
 
-# @testset "few Vars" begin
-#   mu = log.([110,100,80,120,160.0])
-#   sigma = log.([1.2,1.5,1.1,1.3,1.1])
-#   acf1 = [0.4,0.1]
-#   n = length(mu)
-#   corrM = BandedMatrix{Float64}(undef, (n,n), (2,2))
-#   corrM[band(0)] .= 1
-#   for i in 1:length(acf1)
-#     corrM[band(i)] .= corrM[band(-i)] .= acf1[i]
-#   end
-#   corrM = Symmetric(corrM)
-#   det(Array(corrM))
-#   nSample = 500
-#   #Sigma = Diagonal(abs2.(sigma)) * corrM
-#   Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
-#   rM = rand(MvNormal(mu, Symmetric(Sigma)), nSample)
-#   #
-#   dsum = sum_lognormals(mu, sigma, corrM )
-#   @test exp(params(dsum)[2]) ≈ 1.133632 rtol = 0.02
-#   #
-#   # repeat with explicitely constraining correlation length
-#   dsum = sum_lognormals(mu, sigma, corrM; corrlength = length(acf1) )
-#   @test exp(params(dsum)[2]) ≈ 1.133632 rtol = 0.02
-# end;  
+@testset "few correlated vars" begin
+  mu = log.([110,100,80,120,160.0])
+  sigma = log.([1.2,1.5,1.1,1.3,1.1])
+  acf1 = [0.4,0.1]
+  n = length(mu)
+  corrM = BandedMatrix{Float64}(undef, (n,n), (2,2))
+  corrM[band(0)] .= 1
+  for i in 1:length(acf1)
+    corrM[band(i)] .= corrM[band(-i)] .= acf1[i]
+  end
+  corrM = Symmetric(corrM)
+  det(Array(corrM))
+  nSample = 500
+  #Sigma = Diagonal(abs2.(sigma)) * corrM
+  Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
+  #
+  ds = DistributionSequence(LogNormal, mu, sigma)
+  dsum = sum(ds, corrM )
+  # regression test TODO check with random numbers
+  @test σstar(dsum) ≈ 1.133632 rtol = 0.02
+  #
+  # repeat with explicitely constraining correlation length
+  dsum2 = sum(ds, corrM, corrlength = length(acf1) )
+  @test dsum2 == dsum
+  #
+  # missings
+  mum = allowmissing(mu); mum[1] = missing
+  dsm = DistributionSequence(LogNormal, mum, sigma)
+  @test_throws ErrorException dsumm = sum(dsm, corrM )
+  dsumm = sum(dsm, corrM; skipmissings = Val(true) )
+  # regression test
+  @test σstar(dsumm) ≈ 1.05 rtol = 0.02
+  #
+  # TODO check by random numbers
+  #rM = rand(MvNormal(mu, Symmetric(Sigma)), nSample)
+end;  
 
-# @testset "handle missings uncorrelated" begin
-#   mu = log.([110,100,80.0])
-#   sigma = log.(repeat([1.2], length(mu)))
-#   # one finite case
-#   sigma1 = allowmissing(sigma); sigma1[2:end] .= missing;
-#   @test_throws Exception sum_lognormals(mu, sigma1)
-#   dsum = sum_lognormals(mu, sigma1; skipmissings = Val(true))
-#   @test all(params(dsum) .≈ (mu[1], sigma[1]))
-#   # no finite case
-#   sigma0 = allowmissing(sigma); sigma0[:] .= missing;
-#   @test_throws Exception coefSum = sum_lognormals(mu, sigma0)
-#   @test_throws Exception sum_lognormals(mu, sigma0; skipmissings = Val(true))
-# end;
-
-# @testset "handle missings correlated" begin
-#     mu = log.([110,100,80.0])
-#     sigma = log.(repeat([1.2], length(mu)))
-#     corrM = [1   0.4  0
-#              0.4 1    0.4
-#              0   0.4  1]
-#     # one finite case
-#     sigma1 = allowmissing(sigma); sigma1[2:end] .= missing;
-#     @test_throws Exception sum_lognormals(mu, sigma1, corrM)
-#     dsum = sum_lognormals(mu, sigma1, corrM; skipmissings = Val(true))
-#     @test all(params(dsum) .≈ (mu[1], sigma[1]))
-#     # no finite case
-#     sigma0 = allowmissing(sigma); sigma0[:] .= missing;
-#     @test_throws Exception coefSum = sum_lognormals(mu, sigma0)
-#     @test_throws ErrorException sum_lognormals(mu, sigma0; skipmissings = Val(true))
-# end;
 
 # # function bootstrap_sums_lognormal()
 # #     nObs = 5
