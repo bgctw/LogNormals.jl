@@ -11,10 +11,12 @@ export AbstractMoments, Moments, n_moments, moments,
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
-    sum_lognormals
+    sum_lognormals, AbstractDistributionSequence, DistributionSequence,
+    nparams
 
 
 using Distributions, StaticArrays, LinearAlgebra, Missings
+import StatsBase
 
 # general fitting to statistics
 include("fitstats.jl")

@@ -82,7 +82,25 @@ function experimentAR1()
     autocor(x, 1:10)
 end
 
-d = LogNormal(log(2), log(1.2))
-σstar(d) == 1.2
-d = fit(LogNormal, 2, Σstar(1.2))
-(mean(d), σstar(d)) == (2, 1.2)  
+function bar(x::Vararg{D}...)
+    length(x), x[1], typeof(x)
+end
+bar(LogNormal(), LogNormal())
+
+function baz(x::Tuple{Vararg{D}}) where D
+    #length(x), x[1], typeof(x)
+    x
+end
+baz(x...) = baz(x)
+y = baz(LogNormal(), LogNormal())
+
+function foo(ds::Vararg{D}) where D <: Distribution 
+    length(ds), ds[1], typeof(ds)
+end
+y = foo(LogNormal(), LogNormal())
+y = foo(LogNormal(), Normal())
+
+struct S2{D,T}
+    p::T
+end
+S2(D::Type, p=1) = S2{D, eltype(D)}(p)
