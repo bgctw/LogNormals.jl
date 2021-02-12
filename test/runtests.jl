@@ -9,6 +9,7 @@ include("lognormal.jl")
 include("normal.jl")
 include("logitnormal.jl")
 
+include("distributionvector.jl")
 include("sumlognormals.jl")
 
 

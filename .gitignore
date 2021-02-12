@@ -1,1 +1,4 @@
 test/scratch.jl
+dev/*.mem
+src/*.mem
+test/*.mem

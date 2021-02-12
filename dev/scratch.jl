@@ -82,11 +82,11 @@ function experimentAR1()
     autocor(x, 1:10)
 end
 
-# ?LinearIndices
-A = fill(1, (5,6,7));
-b = LinearIndices(A);
-extrema(b)
-#  (1, 210)
-  LinearIndices(inds::CartesianIndices) -> R
-  LinearIndices(sz::Dims) -> R
-  LinearIndices((istart:istop, jstart:jstop, ...)) -> R
+tvec = allowmissing([(rand(),rand()) for i=1:6]);
+tvec[1] = missing
+c = mappedarray(x-> ismissing(x) ? missing : first(x),tvec);
+c[1]
+c[1:2]
+c[[1,2]]
+
+

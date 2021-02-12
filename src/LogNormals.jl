@@ -11,8 +11,8 @@ export AbstractMoments, Moments, n_moments, moments,
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
-    sum_lognormals!, AbstractDistributionSequence, DistributionSequence,
-    nparams,
+    AbstractDistributionVector, DistributionVector,
+    sum_lognormals!, 
     cormatrix_for_acf
 
 
@@ -31,6 +31,9 @@ include("normal.jl")
 
 # logitnormal fitting
 include("logitnormal.jl")
+
+# DistributionVector type
+include("distributionvector.jl")
 
 # sum of lognormal random variables
 include("sumlognormals.jl")
