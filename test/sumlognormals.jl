@@ -9,9 +9,11 @@ end
     mu = [1.1,1.2,1.3]
     sigma = [1.01, 1.02, 1.03]
     # makes a copy to support missing
-    ds = ds1 = DistributionSequence(LogNormal, transpose(hcat(mu, sigma)))
+    ds = ds1 = DistributionSequence(LogNormal, allowmissing(transpose(hcat(mu, sigma))))
     # must be of type Distribution
     @test_throws Exception DistributionSequence(String, hcat(mu, sigma))
+    # must allow missings
+    @test_throws Exception DistributionSequence(LogNormal, transpose(hcat(mu, sigma)))
     @test eltype(ds) == Union{Missing,LogNormal}
     #params(ds)
     #params(ds)[:,2]
@@ -38,14 +40,11 @@ end
     @testset "constructor with parameter vectors" begin
         ds2 = DistributionSequence(LogNormal, mu, sigma)
         @test ds2.params == ds1.params
-        bn = [1,1]
-        bp = [0.5, 0.7]
-        dsb = DistributionSequence(LogNormal, bn, bp)
     end
     @testset "missings" begin
         mu = [1.1,1.2,missing]
         sigma = [1.01, 1.02, 1.03]
-        dsm = DistributionSequence(LogNormal, transpose(hcat(mu, sigma)))
+        dsm = DistributionSequence(LogNormal, allowmissing(transpose(hcat(mu, sigma))))
         @test eltype(dsm) == Union{Missing,LogNormal}
         # if (false)
         #     @code_warntype(length(dsm))
@@ -60,7 +59,8 @@ end
     @testset "explicit specification of Npar" begin
         db1 = Binomial()
         db2 = Binomial(1,0.7)
-        @test_throws MethodError ds2 = DistributionSequence(db1, db2) #nparams not defined
+        #ds = (db1, db2)
+        @test_throws MethodError ds2 = DistributionSequence(db1, db2) #nparams not defineda = 
         ds2 = @inferred DistributionSequence(db1, db2, npar=Val(2)) 
     end
 end;
@@ -92,37 +92,95 @@ end;
   sigma = log.([1.2,1.5,1.1,1.3,1.1])
   acf1 = [0.4,0.1]
   n = length(mu)
-  corrM = BandedMatrix{Float64}(undef, (n,n), (2,2))
-  corrM[band(0)] .= 1
-  for i in 1:length(acf1)
-    corrM[band(i)] .= corrM[band(-i)] .= acf1[i]
+  corrM = cormatrix_for_acf(n, acf1)
+  #
+  @testset "matrix without missing" begin
+    ds = DistributionSequence(LogNormal, mu, sigma)
+    dsum = sum(ds, corrM )
+    # regression test TODO check with random numbers
+    @test σstar(dsum) ≈ 1.133632 rtol = 0.02
+    # acf variant
+    dsum3 = sum(ds, acf1)
+    @test all(params(dsum3) .≈ params(dsum))
   end
-  corrM = Symmetric(corrM)
-  det(Array(corrM))
-  nSample = 500
-  #Sigma = Diagonal(abs2.(sigma)) * corrM
-  Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
-  #
-  ds = DistributionSequence(LogNormal, mu, sigma)
-  dsum = sum(ds, corrM )
-  # regression test TODO check with random numbers
-  @test σstar(dsum) ≈ 1.133632 rtol = 0.02
-  #
-  # repeat with explicitely constraining correlation length
-  dsum2 = sum(ds, corrM, corrlength = length(acf1) )
-  @test dsum2 == dsum
-  #
-  # missings
-  mum = allowmissing(mu); mum[1] = missing
-  dsm = DistributionSequence(LogNormal, mum, sigma)
-  @test_throws ErrorException dsumm = sum(dsm, corrM )
-  dsumm = sum(dsm, corrM; skipmissings = Val(true) )
-  # regression test
-  @test σstar(dsumm) ≈ 1.05 rtol = 0.02
+  @testset "matrix with missing" begin
+    mum = allowmissing(mu); mum[1] = missing
+    dsm = DistributionSequence(LogNormal, mum, sigma)
+    @test_throws ErrorException dsumm = sum(dsm, corrM )
+    dsumm = sum(dsm, corrM; skipmissings = Val(true) )
+    # regression test TODO
+    @test σstar(dsumm) ≈ 1.15 rtol = 0.02
+    @test_throws ErrorException dsumm2 = sum(dsm, acf1)
+    dsumm2 = sum(dsm, acf1; skipmissings = Val(true))
+    @test all(params(dsumm2) .≈ params(dsumm))
   #
   # TODO check by random numbers
+  #nSample = 500
+  #Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
   #rM = rand(MvNormal(mu, Symmetric(Sigma)), nSample)
 end;  
+
+function benchmarkSums()
+    using BenchmarkTools
+    nrep = 30
+    mu = log.(rand(Normal(120, 10), nrep));
+    sigma = log.(rand(Normal(1.2, 0.1), nrep));
+    acf1 = vcat([0.8,0.3,0.1], repeat([0.05], 20));
+    ds = DistributionSequence(LogNormal, mu, sigma)
+    @btime dsum_v = sum($ds, $acf1, skipmissings = Val(true), method = Val(:vector) )
+    @btime dsum_m = sum($ds, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
+    # the Bandematrix based is faster
+    #
+    # check type system
+    storage = allowmissing(similar(mu));
+    corMa = cormatrix_for_acf(length(ds),acf1);
+    @code_warntype sum_lognormals!(storage, ds, acf1, skipmissings = Val(true) )
+    @code_warntype sum(ds, acf1, skipmissings = Val(true), method = Val(:vector) )
+    @code_warntype sum_lognormals!(storage, ds, corMa, skipmissings = Val(true) )
+    @code_warntype sum(ds, acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
+    @btime sum_lognormals!($storage, $ds, $corMa, skipmissings = Val(true) )
+    #
+    #
+    #
+    # repeat with missings
+    mum = allowmissing(copy(mu)); mum[1] = missing
+    ds = DistributionSequence(LogNormal, mum, sigma)
+    @btime dsum_v = sum($ds, $acf1, skipmissings = Val(true), method = Val(:vector) )
+    @btime dsum_m = sum($ds, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
+
+    # try allocating instead of view (replace line of view_nonmissing)
+    # allocating is faster
+    function sum_lognormals2!(S, ds, corr::AbstractMatrix; 
+        skipmissings::Val{l} = Val(false)) where l
+        parms = params(ds)
+        μ = @view parms[1,:]
+        σ = @view parms[2,:]
+        # S = allowmissing(similar(μ))
+        @. S = exp(μ + abs2(σ)/2)
+        nmissing = count(ismissing, S)
+        anymissing = nmissing != 0
+        skipmissings != Val(true) && anymissing && error(
+             "Found missing values. Use argument 'skipmissings = Val(true)' to sum over nonmissing.")
+        Ssum::nonmissingtype(eltype(S)) = sum(skipmissing(S))
+        @. S = σ * S  # do only after Ssum
+        # setting S to zero results in summing zero for missing records
+        # which is the same as filtering both S and corr
+        anymissing && replace!(S, missing => 0.0)
+        #s = transpose(disallowmissing(S)) * corr * disallowmissing(S)
+        #Spure = view_nonmissing(S) # non-allocating
+        Spure = disallowmissing(S) # allocating
+        s = transpose(Spure) * corr * Spure
+        σ2eff = s/abs2(Ssum)
+        μ_sum = log(Ssum) - σ2eff/2
+        #@show Ssum, s, length(S) - nmissing
+        LogNormal(μ_sum, √σ2eff)  
+    end
+    @btime sum_lognormals!($storage, $ds, $corMa, skipmissings = Val(true) )
+    @btime sum_lognormals2!($storage, $ds, $corMa, skipmissings = Val(true) )
+
+    
+    
+end
 
 
 # # function bootstrap_sums_lognormal()

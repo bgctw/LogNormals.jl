@@ -7,16 +7,18 @@ Tools that help using the LogNormal distribution.
 module LogNormals
 
 export AbstractMoments, Moments, n_moments, moments,
-    QuantilePoint, Σstar, σstar, length_itr,
+    QuantilePoint, Σstar, σstar, #length_itr,
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
-    sum_lognormals, AbstractDistributionSequence, DistributionSequence,
-    nparams
+    sum_lognormals!, AbstractDistributionSequence, DistributionSequence,
+    nparams,
+    cormatrix_for_acf
 
 
 using Distributions, StaticArrays, LinearAlgebra, Missings
 import StatsBase
+using BandedMatrices, MappedArrays
 
 # general fitting to statistics
 include("fitstats.jl")
