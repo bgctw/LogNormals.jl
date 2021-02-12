@@ -1,5 +1,7 @@
 using Test, Distributions, LogNormals
 
+@testset "lognormal" begin
+
 @testset "LogNormal properties" begin
     @testset "σstar" begin
         d = LogNormal(1,2)    
@@ -71,3 +73,4 @@ end;
     end;
 end;
 
+end;

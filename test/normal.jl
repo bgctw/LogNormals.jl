@@ -1,3 +1,5 @@
+@testset "normal" begin
+
 @testset "Normal fit to stats" begin
     d = Normal(3,2)
     qp = @qp(0.95,quantile(d,0.95))
@@ -26,6 +28,7 @@
         dfit = fit(Normal, median(d), qp, Val(:median))
         @test dfit ≈ d
     end;
+end;
 
 end;
 

@@ -214,7 +214,8 @@ function Distributions.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val
     stats == :mode && return(fit_mode_quantile(D, val, qp))
     stats == :median && return(fit_median_quantile(D, val, qp))
     error("unknown stats: $stats")
-end
+end;
+
 
 
 
