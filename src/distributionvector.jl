@@ -5,7 +5,8 @@ function paramtypes(::Type{D}) where D<:Distribution
 end
 function tupleofvectype(::Type{D}) where D<:Distribution 
     # https://discourse.julialang.org/t/allocations-in-comprehensions/21309/3
-    V = Tuple{ntuple(i -> Vector{Union{Missing,paramtypes(D)[i]}}, length(paramtypes(D)))...}
+    V = Tuple{ntuple(
+        i -> Vector{Union{Missing,paramtypes(D)[i]}}, length(paramtypes(D)))...}
 end
 
 
@@ -26,7 +27,8 @@ vectuptotupvec(vectup) == ([1, 2], [1.01, 2.02], ["string 1", "string 2"])
 true
 ```
 """
-function vectuptotupvec(vectup::AbstractVector{TT}) where {TT<:Union{Missing,NTuple{N, Any}}} where N
+function vectuptotupvec(vectup::AbstractVector{TT}) where 
+    {TT<:Union{Missing,NTuple{N, Any}}} where N
     v1 = first(skipmissing(vectup))
     types = typeof.(v1)
     imiss = findall(ismissing, vectup) # unfortunately allocating
@@ -35,7 +37,8 @@ function vectuptotupvec(vectup::AbstractVector{TT}) where {TT<:Union{Missing,NTu
         # because there is no missing of correct type during getindex
         vectupc = mappedarray((x -> ismissing(x) ? v1 : x), vectup)
         function f(i) 
-            v = allowmissing(getindex.(vectupc,i))::Vector{Union{Missing,types[i]}}
+            v = allowmissing(
+                getindex.(vectupc,i))::Vector{Union{Missing,types[i]}}
             v[imiss] .= missing
             v
         end
@@ -60,13 +63,16 @@ example, computing the distribution of the sum of random variables by
 It is parametrized by `D <: Distribution` defining the type of the distribution
 used for all the random variables.
 
-Items may be missing. Hence the element type of the iterator is `Union{Missing,D}`.
+Items may be missing. Hence the element type of the iterator is 
+`Union{Missing,D}`.
 
 AbstractDistributionVector
 - is iterable
 - has length and index access, i.e. dv[i]::D
-- access to entire parameter vectors: params(dv,i)::AbstractVector{typeof(params(D)[i]}
+- access to entire parameter vectors: 
+  params(dv,i)::AbstractVector{typeof(params(D)[i]}
 - conversion of Tuple of Vectors: params(dv)
+- vector of random numbers: rand(n, dv)
 
 Specific implementations,  need
 to implement at minimum methods `length` and `getindex` and may implement
@@ -74,7 +80,8 @@ a faster non-allocating specialization of `params`.
 
 There are two standard implementations:
 - [SimpleDistributionVector](@ref): fast indexing but slower `params` method 
-- [ParamDistributionVector](@ref): possible allocations in indexing but faster `params`
+- [ParamDistributionVector](@ref): possible allocations in indexing but 
+  faster `params`
 """
 abstract type AbstractDistributionVector{D <: Distribution} end
 
@@ -88,13 +95,27 @@ function Base.iterate(rds::Iterators.Reverse{AbstractDistributionVector},
     state=length(rds.itr))  
     state < 1 ? nothing : (rds.itr[state], state-1)
 end
+Base.firstindex(dv::AbstractDistributionVector) = 1
+Base.lastindex(dv::AbstractDistributionVector) = length(dv)
+Base.getindex(dv::AbstractDistributionVector, i::Number) = dv[convert(Int, i)]
+Base.getindex(dv::DV, I) where DV<:AbstractDistributionVector{D} where D = 
+    Base.typename(DV).wrapper((dv[i] for i in I)...)
 
-function StatsBase.params(dv::AbstractDistributionVector{D}, ::Val{i}) where {D,i}
+function StatsBase.params(dv::AbstractDistributionVector{D}, ::Val{i}) where 
+    {D,i}
     # need to help compile to determine the type of tupvec
     T = tupleofvectype(D).parameters[i]
     allowmissing(collect(passmissing(getindex).(passmissing(params).(dv),i)))::T
 end
 
+function Random.rand(dv::AbstractDistributionVector{D}) where {D<:Distribution} 
+    fmiss(x) = ismissing(x) ? missing : rand(x)
+    allowmissing(fmiss.(dv))::Vector{Union{Missing,eltype(D)}} 
+end
+Random.rand(dv::AbstractDistributionVector, dim1::Int) = 
+    rand(GLOBAL_RNG, dv, dim1)
+Random.rand(rng::AbstractRNG, dv::AbstractDistributionVector{D}, 
+    dim1::Int) where D = [rand(dv) for i in 1:dim1]
 
 
 ## SimpleDistributionVector   
@@ -143,14 +164,16 @@ function SimpleDistributionVector(::Type{D}, dvec::V) where
         " Did you specify all type parameters, e.g. $D{Float64}?")
     Missing <: eltype(V) || error(
         "Expected type of parameters to allow for missing." *
-        " Can you use 'allowmissing' in constructing the SimpleDistributionVector?")
+        " Can you use 'allowmissing' in constructing the " *
+        "SimpleDistributionVector?")
     eltype(V) <: Union{Missing, <:D} || error(
         "Expected type of parameters of 'Union{Missing, $(D)}' "*
         " but got $(eltype(V)).")
     SimpleDistributionVector{D, V}(dvec)
 end
 
-function SimpleDistributionVector(dv::Vararg{Union{Missing,D},N}) where {D<:Distribution, N} 
+function SimpleDistributionVector(dv::Vararg{Union{Missing,D},N}) where 
+    {D<:Distribution, N} 
     N == 0 && error(
         "Provide at least one argument, i.e. distribtution," *
         "i n SimpleDistributionVector(x...).")
@@ -158,15 +181,13 @@ function SimpleDistributionVector(dv::Vararg{Union{Missing,D},N}) where {D<:Dist
     SimpleDistributionVector(D, allowmissing(dvec))
 end
 
-function SimpleDistributionVector(::Type{D}, pvec::Vararg{Any,N}) where {D<:Distribution, N} 
+function SimpleDistributionVector(::Type{D}, pvec::Vararg{Any,N}) where 
+    {D<:Distribution, N} 
     # must use information from D to make return type stable
     pvecm = (x -> allowmissing(x)).(pvec)::tupleofvectype(D)
     dvec = allowmissing(collect(zip(pvecm...)))
     # if one parameter has missing, the entire tuple must be set to missing
     anymissing(tup) = any(ismissing.(tup))
-    # not typesafe
-    # dvec[anymissing.(dvec)] .= missing
-    # SimpleDistributionVector((ismissing(x) ? missing : Binomial(x...) for x in dvec)...)
     imiss = anymissing.(dvec)
     tupm = dvec[findfirst(.!imiss)]
     dvec[imiss] .= Ref(tupm)
@@ -185,31 +206,34 @@ end
 # params(i) already defined as default in AbstractDistributionVector
 # function StatsBase.params(dv::SimpleDistributionVector, i::Integer) 
 #    # mappedarray(e -> passmissing(getindex)(e,i), dv.dvec)
-#    # currentl does not work, see https://github.com/JuliaArrays/MappedArrays.jl/issues/40
+#    # currentl does not work, see 
+# https://github.com/JuliaArrays/MappedArrays.jl/issues/40
 #    passmissing(getindex).(passmissing(params).(dv.dvec),i)
 # end
 
 function StatsBase.params(dv::SimpleDistributionVector{D,V}) where {D,V}
-    #vectuptotupvec(passmissing(params).(dv.dvec)) # passmissing(...) not typestable
+    # passmissing(...) not typestable
+    #vectuptotupvec(passmissing(params).(dv.dvec)) 
     # also not typestable:
     #vectup = mappedarray((x -> ismissing(x) ? missing : params(x)),dv.dvec)
     v1 = params(first(skipmissing(dv.dvec)))
     types = typeof.(v1)
     imiss = findall(ismissing, dv.dvec) # unfortunately allocating
     if length(imiss) != 0
-        # replace missing by a tuple of correct type (replaced later be missings)
+        # replace missing by a tuple of correct type (replaced later by missing)
         # because there is no missing of correct type during getindex
-        #vectupc = mappedarray((x -> ismissing(x) ? ntuple(_->missing,length(v1)) : params(x)), dv.dvec)
         vectupc = mappedarray((x -> ismissing(x) ? v1 : params(x)), dv.dvec)
         function f(i) 
-            v = allowmissing(getindex.(vectupc,i))::Vector{Union{Missing,types[i]}}
+            v = allowmissing(
+                getindex.(vectupc,i))::Vector{Union{Missing,types[i]}}
             v[imiss] .= missing
             v
         end
         ntuple(f, length(v1))
     else
         ntuple((i ->
-            allowmissing(getindex.(params.(dv.dvec),i))::Vector{Union{Missing,types[i]}}
+            allowmissing(
+                getindex.(params.(dv.dvec),i))::Vector{Union{Missing,types[i]}}
         ), length(v1))
     end
 end
@@ -273,18 +297,22 @@ end
 
 
 
-function ParamDistributionVector(dtup::Vararg{Union{Missing,D},N}) where {D<:Distribution, N} 
+function ParamDistributionVector(dtup::Vararg{Union{Missing,D},N}) where 
+    {D<:Distribution, N} 
     N == 0 && error(
         "Provide at least one distribution in ParamDistributionVector(x...).")
     # need to help compile to determine the type of tupvec
     tupvec = Tuple(
-        allowmissing(collect(passmissing(getindex).(passmissing(params).(dtup),i))) 
+        allowmissing(
+            collect(passmissing(getindex).(passmissing(params).(dtup),i))) 
         for i in 1:length(paramtypes(D)))::tupleofvectype(D)
     ParamDistributionVector(D, tupvec)
 end
 
-function ParamDistributionVector(::Type{D}, pvec::Vararg{Any,N}) where {D<:Distribution, N} 
-    # cannot constrain first type in VarArg because Array{Int} differst from Array{Float64}
+function ParamDistributionVector(::Type{D}, pvec::Vararg{Any,N}) where 
+    {D<:Distribution, N} 
+    # cannot constrain first type in VarArg because Array{Int} differst 
+    # from Array{Float64}
     # in order to be type-stable type D must be queried for required types
     pvecm = (x -> allowmissing(x)).(pvec)::tupleofvectype(D)
     ParamDistributionVector(D, pvecm)        
@@ -292,14 +320,16 @@ end
 
 Base.length(dv::ParamDistributionVector) = length(first(dv.params))
 
-function Base.getindex(dv::ParamDistributionVector{D,V},i::Int)::Union{Missing, D} where {D,V}
+function Base.getindex(dv::ParamDistributionVector{D,V}, 
+    i::Int)::Union{Missing, D} where {D,V}
     params_i = getindex.(dv.params, Ref(i))
     any(ismissing.(params_i)) && return missing
     D(params_i...)
 end
 
-function StatsBase.params(dv::ParamDistributionVector{D,V}, ::Val{i}) where {D,V,i}
-    # if types of parameters differ, then without annotation a union type is returned
+function StatsBase.params(dv::ParamDistributionVector{D,V}, ::Val{i}) where 
+    {D,V,i}
+    # if types of parameters differ, then a union type is returned -> need Val
     dv.params[i]
 end
 

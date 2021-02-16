@@ -89,3 +89,49 @@ c[1]
 c[1:2]
 c[[1,2]]
 
+
+x = [missing, 1.0];
+y = [missing, 2.0];
+f(x,y) = x[1] * y[1] * x[2] * y[2];
+@time f(x,y); @time f(x,y)
+
+mul4(x1,x2,x3,x4) = x1 * x2 * x3 * x4
+function f(x,y)
+    s = zero(nonmissingtype(eltype(x)))
+    for i in axes(x,1), j in axes(y,1)
+        sij = passmissing(+)(x[i] * x[j],  y[i] * y[j])
+        if !ismissing(sij) 
+            s += sij::nonmissingtype(eltype(x))
+        end
+    end
+    s
+end
+@code_warntype f(x,y)
+@time f(x,y); @time f(x,y)
+
+function f(x,y)
+    T = nonmissingtype(eltype(x))
+    s = zero(T)
+    for i in axes(x,1), j in axes(y,1)
+        #if !any(ismissing.((x[i], x[j], y[i], y[j])))
+        if !ismissing(x[i]) && !ismissing(x[j]) && !ismissing(y[i]) && !ismissing(y[i]) 
+            sij = x[i] * x[j] + y[i] * y[j]
+            s += sij::T
+        end
+    end
+    s
+end
+#@code_warntype f(x,y)
+@time f(x,y); @time f(x,y)
+
+x = [1.01, 1.0]
+y = [2.02, 2.0]
+@time f(x,y); @time f(x,y)
+
+@code_warntype f()
+
+
+
+f() = *(x[1], y[1], x[2], y[2])
+@time f(); @time f()
+
