@@ -11,9 +11,11 @@ export AbstractMoments, Moments, n_moments, moments,
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
-    AbstractDistributionVector, DistributionVector,
+    AbstractDistributionVector, SimpleDistributionVector, ParamDistributionVector,
     sum_lognormals!, 
-    cormatrix_for_acf
+    cormatrix_for_acf,
+    paramtypes,
+    vectuptotupvec
 
 
 using Distributions, StaticArrays, LinearAlgebra, Missings
@@ -32,7 +34,7 @@ include("normal.jl")
 # logitnormal fitting
 include("logitnormal.jl")
 
-# DistributionVector type
+# SimpleDistributionVector type
 include("distributionvector.jl")
 
 # sum of lognormal random variables

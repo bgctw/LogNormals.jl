@@ -5,7 +5,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #     # generate nSample values of two lognormal random variables
 #     d1 = LogNormal(log(110), 0.25)
 #     d2 = LogNormal(log(100), 0.15)
-#     dv = DistributionVector(d1, d2);
+#     dv = SimpleDistributionVector(d1, d2);
 #     dsum = sum(dv)
 #     @testset "no missings" begin
 #         @test params(dsum)[1] ≈ log(210) rtol = 0.02 
@@ -13,7 +13,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #         @test exp(params(dsum)[2]) ≈ 1.16087 rtol = 0.02
 #     end;
 #     @testset "with missings" begin
-#         dv = DistributionVector(d1, missing);
+#         dv = SimpleDistributionVector(d1, missing);
 #         @test coalesce.(collect(dv), LogNormal()) == [d1, LogNormal()]
 #         @test_throws Exception dsum2 = sum(dv) # without skipmissings
 #         dsum2 = sum(skipmissing(dv))
@@ -31,7 +31,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #   corrM = cormatrix_for_acf(n, acf1)
 #   #
 #   @testset "matrix without missing" begin
-#     dv = DistributionVector(LogNormal, mu, sigma)
+#     dv = SimpleDistributionVector(LogNormal, mu, sigma)
 #     dsum = sum(dv, corrM )
 #     # regression test TODO check with random numbers
 #     @test σstar(dsum) ≈ 1.133632 rtol = 0.02
@@ -41,7 +41,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #   end
 #   @testset "matrix with missing" begin
 #     mum = allowmissing(mu); mum[1] = missing
-#     dsm = DistributionVector(LogNormal, mum, sigma)
+#     dsm = SimpleDistributionVector(LogNormal, mum, sigma)
 #     @test_throws ErrorException dsumm = sum(dsm, corrM )
 #     dsumm = sum(dsm, corrM; skipmissings = Val(true) )
 #     # regression test TODO
@@ -62,7 +62,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #     mu = log.(rand(Normal(120, 10), nrep));
 #     sigma = log.(rand(Normal(1.2, 0.1), nrep));
 #     acf1 = vcat([0.8,0.3,0.1], repeat([0.05], 20));
-#     dv = DistributionVector(LogNormal, mu, sigma)
+#     dv = SimpleDistributionVector(LogNormal, mu, sigma)
 #     @btime dsum_v = sum($dv, $acf1, skipmissings = Val(true), method = Val(:vector) )
 #     @btime dsum_m = sum($dv, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
 #     # the Bandematrix based is faster
@@ -80,7 +80,7 @@ using Test, Distributions, LinearAlgebra, Missings
 #     #
 #     # repeat with missings
 #     mum = allowmissing(copy(mu)); mum[1] = missing
-#     dv = DistributionVector(LogNormal, mum, sigma)
+#     dv = SimpleDistributionVector(LogNormal, mum, sigma)
 #     @btime dsum_v = sum($dv, $acf1, skipmissings = Val(true), method = Val(:vector) )
 #     @btime dsum_m = sum($dv, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
 

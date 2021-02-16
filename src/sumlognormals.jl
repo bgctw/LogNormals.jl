@@ -6,9 +6,9 @@
 #     count(x -> true, x)
 # end
 
-# nparams(::Type{<:LogNormal}) = 2
-# nparams(::Type{<:Normal}) = 2
-# nparams(::Type{<:LogitNormal}) = 2
+nparams(::Type{<:LogNormal}) = 2
+nparams(::Type{<:Normal}) = 2
+nparams(::Type{<:LogitNormal}) = 2
 
 
 
