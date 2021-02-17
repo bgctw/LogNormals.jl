@@ -57,6 +57,10 @@ end;
         darr = [d for d in dvm]
         ismissing(darr[1])
     end; 
+    @testset "getindex" begin
+        @test isequal(collect(@inferred dv[1:3]), collect(dv))
+        @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
+    end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)
         d2 = Binomial(2, 0.15)
@@ -173,6 +177,10 @@ end; # testset "SimpleDistributionVector"
         darr = [d for d in dvm]
         ismissing(darr[1])
     end; 
+    @testset "getindex" begin
+        @test isequal(collect(@inferred dv[1:3]), collect(dv))
+        @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
+    end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)
         d2 = Binomial(2, 0.15)

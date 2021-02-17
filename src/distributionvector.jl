@@ -98,8 +98,6 @@ end
 Base.firstindex(dv::AbstractDistributionVector) = 1
 Base.lastindex(dv::AbstractDistributionVector) = length(dv)
 Base.getindex(dv::AbstractDistributionVector, i::Number) = dv[convert(Int, i)]
-Base.getindex(dv::DV, I) where DV<:AbstractDistributionVector{D} where D = 
-    Base.typename(DV).wrapper((dv[i] for i in I)...)
 
 function StatsBase.params(dv::AbstractDistributionVector{D}, ::Val{i}) where 
     {D,i}
@@ -202,6 +200,10 @@ Base.length(dv::SimpleDistributionVector) = length(dv.dvec)
 function Base.getindex(dv::SimpleDistributionVector{D,V},i::Int) where {D,V}
     dv.dvec[i]::Union{Missing, D}
 end
+Base.getindex(dv::SimpleDistributionVector{D, V}, I) where {D,V} = 
+    SimpleDistributionVector{D,V}(dv.dvec[I])
+    #Base.typename(DV).wrapper((dv[i] for i in I)...)
+
 
 # params(i) already defined as default in AbstractDistributionVector
 # function StatsBase.params(dv::SimpleDistributionVector, i::Integer) 
@@ -326,6 +328,12 @@ function Base.getindex(dv::ParamDistributionVector{D,V},
     any(ismissing.(params_i)) && return missing
     D(params_i...)
 end
+function Base.getindex(dv::ParamDistributionVector{D, V}, I) where {D,V} 
+    tupvec = map(x -> x[I], dv.params)
+    ParamDistributionVector{D,V}(tupvec)
+    #Base.typename(DV).wrapper((dv[i] for i in I)...)
+end
+
 
 function StatsBase.params(dv::ParamDistributionVector{D,V}, ::Val{i}) where 
     {D,V,i}

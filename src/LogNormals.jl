@@ -20,9 +20,10 @@ export AbstractMoments, Moments, n_moments, moments,
 
 using Distributions, StaticArrays, LinearAlgebra, Missings
 import StatsBase
-using BandedMatrices, MappedArrays, RecursiveArrayTools
+using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays
 using Random
 import Random: GLOBAL_RNG, rand
+import Base: sum
 
 # general fitting to statistics
 include("fitstats.jl")

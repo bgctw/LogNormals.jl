@@ -135,3 +135,24 @@ y = [2.02, 2.0]
 f() = *(x[1], y[1], x[2], y[2])
 @time f(); @time f()
 
+# fast compiler code works on value-type keyword argument
+function f(;sk::Val{B} = Val(true)) where B
+    B==true && return(1)
+    2
+end
+f()
+@code_llvm f()
+@code_llvm f(sk=Val(false))
+
+#modifying several arrays with one filter in the same loop
+function f!(a,b,F)
+    for i in Iterators.filter(F, 1:length(a))
+        a[i] = 0
+        b[i] = 1
+    end
+    a,b
+end
+a = collect(1:5)
+b = collect(1:5)
+isgapfilled = falses(5); isgapfilled[3] = true
+f!(a,b, (i -> isgapfilled[i]))
