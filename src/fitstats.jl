@@ -66,7 +66,7 @@ moments(LogNormal(), Val(4))  # first four moments
 moments(Normal())  # mean and variance
 
 # output
-Moments{2,Float64}([0.0, 1.0])
+Moments{2, Float64}([0.0, 1.0])
 ```
 """
 function moments(d::Distribution, ::Val{N} = Val(2)) where N 

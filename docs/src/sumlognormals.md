@@ -1,33 +1,55 @@
 # Sum of correlated lognormal random variables
 
-
-<!-- ```@meta
-function boot_dvsums_acf(dv, acf, nboot = 10_000)
-    # test sum formula by bootstrap sample
-    μ, σ = params(dv)
-    Sigma = Diagonal(σ) * cormatrix_for_acf(length(dv), acf) * Diagonal(σ);
-    dn = MvNormal(disallowmissing(μ), Symmetric(Sigma));
-    x = rand(dn, nboot) .|> exp
-    sums = vec(sum(x, dims = 1))
-    #density(sums)
-    drsum = fit(LogNormal, sums)
-end
-```
-
-```jldoctest; output = false, setup = :(using Distributions,LogNormals,StatsPlots,Plots)
-    mu = log.([110,100,80,120,160.0])
-    sigma = log.([1.2,1.5,1.1,1.3,1.1])
-    acf1 = [0.4,0.1]
-    dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
-    drsum = boot_dvsums_acf(dv, acf1) # boot sum across random numbers
-
-    dsum = sum(dv, acf1)
-
-    @test dsum ≈ drsum rtol = 0.02
-``` -->
+Method sum for a `DistributionVector{<:LogNormal}`
+computes approximation of the distribution of the sum of the
+corresponding lognormal variables..
 
 ```@docs
 sum(Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
     {T, DV <: AbstractDistributionVector{LogNormal{T}}, B}
 ```
+
+In the following example the computed approximation is compared
+to a bootstrap sample of sums over three correlated random variables.
+
+```@setup boot
+using StatsPlots,Plots,LinearAlgebra,Missings
+function boot_dvsums_acf(dv, acf, nboot = 10_000)
+    μ, σ = params(dv)
+    Sigma = Diagonal(σ) * cormatrix_for_acf(length(dv), acf) * Diagonal(σ);
+    dn = MvNormal(disallowmissing(μ), Symmetric(Sigma));
+    x = rand(dn, nboot) .|> exp
+    sums = vec(sum(x, dims = 1))
+end
+```
+
+```@jldoctest boot; output=false
+isapprox(dsum, fit(LogNormal, sums), rtol = 0.2)
+# output
+true
+```
+
+```@example boot
+using Distributions,LogNormals
+mu = log.([110,100,80])
+sigma = log.([1.2,1.5,1.1])
+acf1 = [0.4,0.1]
+dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
+dsum = sum(dv, acf1)
+```
+
+```@setup boot
+sums = boot_dvsums_acf(dv, acf1); # boot sum across random numbers
+p = plot(dsum, lab="computed", xlabel="sum of 3 correlated lognormally distributed random variables", ylabel="density");
+density!(p, sums, lab="random sample");
+vline!(p, [mean(dsum)], lab="mean computed");
+vline!(p, [mean(sums)], lab="mean random");
+vline!(p, quantile(dsum, [0.025, 0.975]), lab="cf computed");
+vline!(p, quantile(sums, [0.025, 0.975]), lab="cf random");
+plot(p)
+savefig("sumlognormals.svg"); nothing
+```
+
+![plot of sum of lognormals](sumlognormals.svg)
+
 
