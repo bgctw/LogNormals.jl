@@ -10,7 +10,6 @@ function tupleofvectype(::Type{D}) where D<:Distribution
 end
 
 
-
 """
     vectuptotupvec(vectup)
 
@@ -20,7 +19,7 @@ Typesafe convert from Vector of Tuples to Tuple of Vectors.
 * `vectup`: A Vector of identical Tuples 
 
 # Examples
-```jldoctest; output=false
+```jldoctest; output=false, setup = :(using Distributions,LogNormals)
 vectup = [(1,1.01, "string 1"), (2,2.02, "string 2")] 
 vectuptotupvec(vectup) == ([1, 2], [1.01, 2.02], ["string 1", "string 2"])
 # output
@@ -58,7 +57,7 @@ This corresponds to a sequence of random variables, each characterized
 by the same type of distribution but with different parameters. 
 This allows aggregating functions to work, for
 example, computing the distribution of the sum of random variables by 
-[sum(::SimpleDistributionVector)](@ref).
+[`sum(dv::AbstractDistributionVector)`](@ref).
 
 It is parametrized by `D <: Distribution` defining the type of the distribution
 used for all the random variables.
@@ -68,20 +67,31 @@ Items may be missing. Hence the element type of the iterator is
 
 AbstractDistributionVector
 - is iterable
-- has length and index access, i.e. dv[i]::D
-- access to entire parameter vectors: 
-  params(dv,i)::AbstractVector{typeof(params(D)[i]}
-- conversion of Tuple of Vectors: params(dv)
-- vector of random numbers: rand(n, dv)
+- has length and index access, i.e. `dv[i]::D`
+- access to entire parameter vectors: `params(dv,Val(i))`
+- conversion of Tuple of Vectors: `params(dv)`
+- array of random numbers: `rand(n, dv)`: adding one 
+  dimension that represents across random variables
 
 Specific implementations,  need
-to implement at minimum methods `length` and `getindex` and may implement
-a faster non-allocating specialization of `params`.
+to implement at minimum methods `length` and `getindex`, and `params`.
 
 There are two standard implementations:
-- [SimpleDistributionVector](@ref): fast indexing but slower `params` method 
-- [ParamDistributionVector](@ref): possible allocations in indexing but 
+- [`SimpleDistributionVector`](@ref): fast indexing but slower `params` method 
+- [`ParamDistributionVector`](@ref): possible allocations in indexing but 
   faster `params`
+
+# Examples
+```jldoctest; output = false, setup = :(using Distributions,LogNormals)
+dmn1 = MvNormal([0,0,0], 1)
+dmn2 = MvNormal([1,1,1], 2)
+dv = SimpleDistributionVector(dmn1, dmn2, missing, missing);
+sample = rand(dv,2);
+# 4 distr, each 2 samples of length 3
+size(sample) == (3,2,4)
+# output
+true
+```
 """
 abstract type AbstractDistributionVector{D <: Distribution} end
 
@@ -106,14 +116,27 @@ function StatsBase.params(dv::AbstractDistributionVector{D}, ::Val{i}) where
     allowmissing(collect(passmissing(getindex).(passmissing(params).(dv),i)))::T
 end
 
-function Random.rand(dv::AbstractDistributionVector{D}) where {D<:Distribution} 
-    fmiss(x) = ismissing(x) ? missing : rand(x)
-    allowmissing(fmiss.(dv))::Vector{Union{Missing,eltype(D)}} 
+function Random.rand(dv::AbstractDistributionVector, n::Integer) 
+    x1 = rand(first(skipmissing(dv)), n)
+    xm = Fill(missing,size(x1))
+    #xm = fill(missing,size(x1))
+    fmiss(x)::Union{typeof(xm),typeof(x1)} = (ismissing(x) ? xm : rand(x,n))
+    vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
+    VectorOfArray(vecarr)
 end
-Random.rand(dv::AbstractDistributionVector, dim1::Int) = 
-    rand(GLOBAL_RNG, dv, dim1)
-Random.rand(rng::AbstractRNG, dv::AbstractDistributionVector{D}, 
-    dim1::Int) where D = [rand(dv) for i in 1:dim1]
+function Random.rand(dv::AbstractDistributionVector{D}) where {F,S,D<:Distribution{F,S}}
+    x1 = rand(first(skipmissing(dv))) 
+    xm = Fill(missing,size(x1))
+    #xm = fill(missing,size(x1))
+    fmiss(x)::Union{typeof(xm),typeof(x1)} = (ismissing(x) ? xm : rand(x)) 
+    vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
+    F <: Univariate ? vecarr : VectorOfArray(vecarr)
+end
+
+# Random.rand(dv::AbstractDistributionVector, dim1::Int) = 
+#     rand(GLOBAL_RNG, dv, dim1)
+# Random.rand(rng::AbstractRNG, dv::AbstractDistributionVector{D}, 
+#     dim1::Int) where D = [rand(dv) for i in 1:dim1]
 
 
 ## SimpleDistributionVector   
@@ -121,7 +144,7 @@ Random.rand(rng::AbstractRNG, dv::AbstractDistributionVector{D},
     SimpleDistributionVector{D <: Distribution, V}
 
 Is an Vector-of-Distribution based implementation of 
-[AbstractDistributionVector](@ref).
+[`AbstractDistributionVector`](@ref).
 
 Vector of random var can be created by 
 - specifying the distributions as arguments.
@@ -129,7 +152,7 @@ Vector of random var can be created by
 d1 = LogNormal(log(110), 0.25)
 d2 = LogNormal(log(100), 0.15)
 dv = SimpleDistributionVector(d1, d2, missing);
-params(dv, 1) == [log(110), log(100), missing]
+isequal(params(dv, Val(1)), [log(110), log(100), missing])
 # output
 true
 ```
@@ -138,8 +161,8 @@ true
 ```jldoctest; output = false, setup = :(using Distributions,LogNormals)
 mu = [1.1,1.2,1.3]
 sigma = [1.01, 1.02, missing]
-dv = SimpleDistributionVector(LogNormal, mu, sigma);
-params(dv, 1) == [1.1,1.2,missing]
+dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
+isequal(params(dv, Val(1)), [1.1,1.2,missing])
 # output
 true
 ```
@@ -175,7 +198,8 @@ function SimpleDistributionVector(dv::Vararg{Union{Missing,D},N}) where
     N == 0 && error(
         "Provide at least one argument, i.e. distribtution," *
         "i n SimpleDistributionVector(x...).")
-    dvec = collect(dv)
+    d1 = first(skipmissing(dv))
+    dvec = collect(Union{Missing, typeof(d1)}, dv)::Vector{Union{Missing, typeof(d1)}}
     SimpleDistributionVector(D, allowmissing(dvec))
 end
 
@@ -243,10 +267,10 @@ end
 
 ## ParamDistributionVector
 """
-    ParamsDistributionVector{D <: Distribution, V}
-
+    ParamDistributionVector{D <: Distribution, V}
+   
 Is an Tuple of Vectors based implementation of 
-[AbstractDistributionVector](@ref).
+[`AbstractDistributionVector`](@ref).
 
 Vector of random var can be created by 
 - specifying the distributions as arguments with some overhead of converting
@@ -255,7 +279,7 @@ Vector of random var can be created by
 d1 = LogNormal(log(110), 0.25)
 d2 = LogNormal(log(100), 0.15)
 dv = ParamDistributionVector(d1, d2, missing);
-params(dv, 1) == [log(110), log(100), missing]
+isequal(params(dv, Val(1)), [log(110), log(100), missing])
 # output
 true
 ```
@@ -264,19 +288,19 @@ true
 ```jldoctest; output = false, setup = :(using Distributions,LogNormals)
 mu = [1.1,1.2,1.3]
 sigma = [1.01, 1.02, missing]
-dv = ParamDistributionVector(LogNormal, mu, sigma);
-params(dv, 1) == [1.1,1.2,missing]
+dv = ParamDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
+ismissing(dv[3])
+isequal(params(dv, Val(1)), [1.1,1.2,1.3]) # third still not missing here
 # output
 true
 ```
 Note that if one of the parameters for entry `i` is missing, then `dv[i]`
-sis missing.
+is missing.
 
 Since distributions are stored by parameter vectors, the acces to these
 vectors is just passing a reference.
 Indexing, will create Distribution types.
 """
-
 struct ParamDistributionVector{D <: Distribution, V <: Tuple} <: 
     AbstractDistributionVector{D} 
     params::V

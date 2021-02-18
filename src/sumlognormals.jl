@@ -12,19 +12,14 @@
 Compute the distribution of the sum of correlated random variables.
 
 # Arguments
-- `dv`: The vector of distributions, see [AbstractDistributionVector](@ref)
-- `skipmissing`: Set to Val(true) to conciously care for missing in dv
+- `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
+- `skipmissing`: Set to `Val(true)` to conciously care for missing in dv
 
 Optional second arguments are supported 
-- correlation matrix, 
-- acf::AbstractVector: coefficients of the autocorrelation function starting 
+- `corr::AbstractMatrix`: correlation matrix, 
+- `acf::AbstractVector`: coefficients of the autocorrelation function starting 
   from lag one
 
-# Examples
-```julia
-julia> five = plusTwo(3)
-5
-```
 """
 function Base.sum(dv::AbstractDistributionVector{<:D}; 
     skipmissings::Val{B} = Val(false)) where {D,B} end
@@ -32,13 +27,15 @@ function Base.sum(dv::AbstractDistributionVector{<:D};
 """
     sum(dv::AbstractDistributionVector{<:LogNormal})
 
-In addition to `sum(AbstractDistributionVector{<:Distribution})` supports a third 
+In addition to [`sum(AbstractDistributionVector{<:Distribution})`](@ref) 
+supports a third 
 argument of type `AbstractVector{Bool}` of the same length as `dv`. Flagged
 records contribute to the estimate mean of the sum, but not to the decrease
 of spread with increasing number of observations.
 """
-function Base.sum(dv::DVM; skipmissings::Val{B} = Val(false)) where 
-    DVM <: Union{Base.SkipMissing{DV},DV} where 
+# function Base.sum(dv::DVM; skipmissings::Val{B} = Val(false)) where 
+#     {T, DV <: AbstractDistributionVector{LogNormal{T}}, DVM <: Union{Base.SkipMissing{DV},DV}, B} 
+function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
     {T, DV <: AbstractDistributionVector{LogNormal{T}}, B} 
     B == true && return(sum(skipmissing(dv)))
     # uncorrelated, only sum diagonal

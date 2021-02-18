@@ -89,11 +89,28 @@ c[1]
 c[1:2]
 c[[1,2]]
 
+using BenchmarkTools
 
 x = [missing, 1.0];
 y = [missing, 2.0];
 f(x,y) = x[1] * y[1] * x[2] * y[2];
-@time f(x,y); @time f(x,y)
+@btime f($x,$y)
+
+function f1(x,y)
+    s = zero(eltype(x))
+    for i in axes(x,1), j in axes(y,1)
+        sij = x[i] * x[j] * y[i] * y[j]
+        if !ismissing(sij) 
+            s += sij
+        end
+    end
+    s
+end
+@btime f1($x,$y)
+
+f2(x,y) = sum(skipmissing(x[i] * x[j] + y[i] * y[j] for i in axes(x,1), j in axes(y,1)))
+@btime f2($x,$y)
+
 
 mul4(x1,x2,x3,x4) = x1 * x2 * x3 * x4
 function f(x,y)
@@ -156,3 +173,12 @@ a = collect(1:5)
 b = collect(1:5)
 isgapfilled = falses(5); isgapfilled[3] = true
 f!(a,b, (i -> isgapfilled[i]))
+
+
+function f(dv::AbstractDistributionVector{D}) where {D<:Distribution} 
+    x1 = rand(first(skipmissing(dv)))
+    fmiss(x) = ismissing(x) ? missing : rand(x)
+    allowmissing(fmiss.(dv))::Vector{Union{Missing,typeof(x1)}} 
+end
+f(dv)
+@code_warntype f(dv)

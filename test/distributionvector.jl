@@ -107,13 +107,17 @@ end;
         dmn1 = MvNormal([0,0,0], 1)
         dmn2 = MvNormal([1,1,1], 2)
         #params(dmn1), params(dmn2)
-        dv = @inferred SimpleDistributionVector(dmn1, dmn2, missing);
+        dv = @inferred SimpleDistributionVector(dmn1, dmn2, missing, missing);
         @test @inferred Missing dv[1] == dmn1
         @test @inferred Missing dv[2] == dmn2
         @test ismissing(dv[3])
-        @inferred params(dv, Val(1))
-        @test nonmissingtype(eltype(@inferred Missing params(dv, Val(1)))) <: AbstractVector
-        @test nonmissingtype(eltype(@inferred Missing params(dv, Val(2)))) <: AbstractMatrix
+        @inferred Distributions.params(dv, Val(1))
+        @test nonmissingtype(eltype(@inferred Missing Distributions.params(dv, Val(1)))) <: AbstractVector
+        @test nonmissingtype(eltype(@inferred Missing Distributions.params(dv, Val(2)))) <: AbstractMatrix
+        r1 = @inferred rand(dv)
+        @test size(r1) == (3, 4)
+        rvec = @inferred rand(dv,1) # in each dist(4): vector of 1 draw - mv(3)
+        @test size(rvec) == (3, 1, 4)
     end;
     @testset "Tuple of all parameter vectors" begin
         tupvec = @inferred params(dv0)
@@ -123,17 +127,18 @@ end;
         @test isequal(tupvec[2][2:end], (allowmissing(p)[2:end]))
     end;
     @testset "rand" begin
+        nD = length(dv0)
         x = @inferred rand(dv0)
-        @test size(x) == (3,)
-        x = @inferred rand(dv0,5)
-        @test size(x) == (5,)
-        @test size(x[1]) == (3,)
+        @test size(x) == (nD,)
+        x = @inferred rand(dv0,2)
+        @test size(x) == (2, nD)
         #@code_warntype rand(dv0)
         # with missings
+        nD = length(dv0)
         x = @inferred rand(dvm,5)
-        @test size(x) == (5,)
-        @test size(x[1]) == (3,)
-        @test ismissing(x[2][1])
+        @test size(x) == (5,nD)
+        @test size(x[1]) == (5,)
+        @test all(ismissing.(x[:,1]))
     end;
 end; # testset "SimpleDistributionVector"
 
@@ -244,17 +249,18 @@ end; # testset "SimpleDistributionVector"
         # dv[1].μ = 3
     end;
     @testset "rand" begin
+        nD = length(dv0)
         x = @inferred rand(dv0)
-        @test size(x) == (3,)
-        x = @inferred rand(dv0,5)
-        @test size(x) == (5,)
-        @test size(x[1]) == (3,)
+        @test size(x) == (nD,)
+        x = @inferred rand(dv0,2)
+        @test size(x) == (2, nD)
         #@code_warntype rand(dv0)
         # with missings
+        nD = length(dv0)
         x = @inferred rand(dvm,5)
-        @test size(x) == (5,)
-        @test size(x[1]) == (3,)
-        @test ismissing(x[2][1])
+        @test size(x) == (5,nD)
+        @test size(x[1]) == (5,)
+        @test all(ismissing.(x[:,1]))
     end;
 end; #@testset "ParamDistributionVector"
 
