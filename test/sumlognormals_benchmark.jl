@@ -1,6 +1,6 @@
 using LogNormals
 using Test, Distributions, LinearAlgebra, Missings
-using BenchmarkTools
+using BenchmarkTools: @btime
 using Plots, StatsPlots
 
 function benchmarkSums()
@@ -59,7 +59,7 @@ end
 
 
 function bootstrap_sums_lognormal()
-    using StatsBase
+    #using StatsBase
     nObs = 5
     xTrue = fill(10.0, nObs)
     sigmaStar = fill(1.5, nObs) # multiplicative stddev of 1.5
@@ -67,7 +67,7 @@ function bootstrap_sums_lognormal()
     dsum = sum(dv)
     nboot = 100_000
     x = rand(dv, nboot);
-    sums = map(sum, x);
+    sums = vec(sum(x, dims = 2));
     #stds = std.(Ref(x));
     cdf_sums = ecdf(sums);
     @test cdf_sums(median(dsum)) ≈ 0.5 rtol = 0.02
@@ -84,7 +84,7 @@ function fplot(dsum, sums)
 end
 
 function bootstrap_sums_lognormal_acf()
-    using StatsBase    
+    #using StatsBase    
     mu = log.([110,100,80,120,160.0])
     sigma = log.([1.2,1.5,1.1,1.3,1.1])
     acf1 = [0.4,0.1]

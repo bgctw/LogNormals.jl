@@ -4,7 +4,7 @@ using Test, Distributions, LinearAlgebra, Missings
 function boot_dvsum(dv, nboot = 100_000)
     nboot = 100_000
     x = rand(dv, nboot);
-    sums = map(sum, x);
+    sums = vec(sum(x, dims = 2));
     params(fit(LogNormal,sums))
 end
 

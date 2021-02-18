@@ -89,7 +89,9 @@ c[1]
 c[1:2]
 c[[1,2]]
 
-using BenchmarkTools
+using BenchmarkTools: @btime
+using Test
+
 
 x = [missing, 1.0];
 y = [missing, 2.0];
@@ -141,11 +143,9 @@ end
 #@code_warntype f(x,y)
 @time f(x,y); @time f(x,y)
 
-x = [1.01, 1.0]
-y = [2.02, 2.0]
-@time f(x,y); @time f(x,y)
 
-@code_warntype f()
+f2(x,y) = sum(skipmissing(x[i] * x[j] * y[i] * y[j] for i in axes(x,1), j in axes(y,1)))
+@btime f2($x,$y)
 
 
 
@@ -182,3 +182,18 @@ function f(dv::AbstractDistributionVector{D}) where {D<:Distribution}
 end
 f(dv)
 @code_warntype f(dv)
+
+
+x = [missing, 1.0];
+y = [missing, 2.0]
+g(x) = 2 * x
+function f(x)
+    #collect(eltype(x), g.(x))::Vector{eltype(x)}
+    typeof(x)(g.(x))::typeof(x)
+end
+f(x)
+@inferred f(x)
+
+using StaticArrays
+xs = SVector(missing , 2.0)
+@inferred f(xs)
