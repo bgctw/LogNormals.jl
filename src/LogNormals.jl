@@ -18,8 +18,7 @@ export AbstractMoments, Moments, n_moments, moments,
     vectuptotupvec
 
 
-using Distributions, StaticArrays, LinearAlgebra, Missings
-import StatsBase
+using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays
 using Random
 import Random: GLOBAL_RNG, rand

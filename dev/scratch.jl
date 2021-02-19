@@ -31,7 +31,7 @@ using StaticArrays, Distributions
 
 D = fit(LogNormal, @qp_m(3), @qp_uu(9))
 
-function Distributions.fit(::Type{LogNormal}; mean::Real, mult_std::Real)
+function StatsBase.fit(::Type{LogNormal}; mean::Real, mult_std::Real)
     sigma = log(mult_std)
     mu = log(mean) - sigma*sigma/2
     LogNormal(mu, sigma)

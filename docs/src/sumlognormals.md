@@ -5,29 +5,11 @@ computes approximation of the distribution of the sum of the
 corresponding lognormal variables..
 
 ```@docs
-sum(Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
-    {T, DV <: AbstractDistributionVector{LogNormal{T}}, B}
+sum(Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where {T, DV <: AbstractDistributionVector{LogNormal{T}}, B}
 ```
 
 In the following example the computed approximation is compared
 to a bootstrap sample of sums over three correlated random variables.
-
-```@setup boot
-using StatsPlots,Plots,LinearAlgebra,Missings
-function boot_dvsums_acf(dv, acf, nboot = 10_000)
-    μ, σ = params(dv)
-    Sigma = Diagonal(σ) * cormatrix_for_acf(length(dv), acf) * Diagonal(σ);
-    dn = MvNormal(disallowmissing(μ), Symmetric(Sigma));
-    x = rand(dn, nboot) .|> exp
-    sums = vec(sum(x, dims = 1))
-end
-```
-
-```@jldoctest boot; output=false
-isapprox(dsum, fit(LogNormal, sums), rtol = 0.2)
-# output
-true
-```
 
 ```@example boot
 using Distributions,LogNormals
@@ -39,7 +21,16 @@ dsum = sum(dv, acf1)
 ```
 
 ```@setup boot
-sums = boot_dvsums_acf(dv, acf1); # boot sum across random numbers
+using StatsPlots,Plots,LinearAlgebra,Missings,Test
+function boot_dvsums_acf(dv, acf, nboot = 10_000)
+    μ, σ = params(dv)
+    Sigma = Diagonal(σ) * cormatrix_for_acf(length(dv), acf) * Diagonal(σ);
+    dn = MvNormal(disallowmissing(μ), Symmetric(Sigma));
+    x = rand(dn, nboot) .|> exp
+    sums = vec(sum(x, dims = 1))
+end
+sums = boot_dvsums_acf(dv, acf1); 
+@test isapprox(dsum, fit(LogNormal, sums), rtol = 0.2) 
 p = plot(dsum, lab="computed", xlabel="sum of 3 correlated lognormally distributed random variables", ylabel="density");
 density!(p, sums, lab="random sample");
 vline!(p, [mean(dsum)], lab="mean computed");
