@@ -14,8 +14,8 @@ export AbstractMoments, Moments, n_moments, moments,
     AbstractDistributionVector, SimpleDistributionVector, ParamDistributionVector,
     sum_lognormals!, 
     cormatrix_for_acf,
-    paramtypes,
     vectuptotupvec
+    #paramtypes, 
 
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
