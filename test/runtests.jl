@@ -10,6 +10,7 @@ include("logitnormal.jl")
 
 include("distributionvector.jl")
 include("sumlognormals.jl")
+include("sumnormals.jl")
 
 
 

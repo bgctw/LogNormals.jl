@@ -42,5 +42,8 @@ include("distributionvector.jl")
 # sum of lognormal random variables
 include("sumlognormals.jl")
 
+# sum of normal random variables
+include("sumnormals.jl")
+
     
 end # module
