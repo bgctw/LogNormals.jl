@@ -1,8 +1,8 @@
 function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
-    {T, DV <: AbstractDistributionVector{Normal{T}}, B} 
+    {DV <: AbstractDistributionVector{<:Normal}, B} 
     B == true && return(sum(skipmissing(dv)))
     # uncorrelated, only sum diagonal
-    Ssum = s = zero(T)
+    Ssum = s = zero(eltype(nonmissingtype(eltype(dv))))#zero(T)
     nterm = 0
     for d in dv
         μ,σ = params(d)
@@ -16,9 +16,9 @@ end
 
 # own method with argument isgapfilled, because now cannot use
 # skipmissing any more and need to allocate nonmissing to 
-function Base.sum(dv::DV, isgapfilled::AbstractVector{Bool}; 
-    skipmissings::Val{B} = Val(false)) where 
-    {T<:Real, DV <: AbstractDistributionVector{Normal{T}}, B} 
+function Base.sum(dv::AbstractDistributionVector{<:Normal}, 
+    isgapfilled::AbstractVector{Bool}; 
+    skipmissings::Val{B} = Val(false)) where B
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
@@ -29,7 +29,7 @@ function Base.sum(dv::DV, isgapfilled::AbstractVector{Bool};
             @inbounds(dv[nonmissing]), @inbounds(isgapfilled[nonmissing])))
     end
     # uncorrelated, only sum diagonal
-    Ssum = s = zero(T)
+    Ssum = s = zero(eltype(nonmissingtype(eltype(dv))))
     nterm = 0
     for (i,d) in enumerate(dv)
         μ,σ = params(d)

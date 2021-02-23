@@ -39,11 +39,12 @@ of spread with increasing number of observations.
 # function Base.sum(dv::DVM; skipmissings::Val{B} = Val(false)) where 
 #     {T, DV <: AbstractDistributionVector{LogNormal{T}}, DVM <: Union{Base.SkipMissing{DV},DV}, B} 
 # need to keep Type T, to match LogNormal{Float64}, <:LogNormal is also a UnionAll
-function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
-    {T, DV <: AbstractDistributionVector{LogNormal{T}}, B} 
+function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; 
+    skipmissings::Val{B} = Val(false)) where 
+    {DV <: AbstractDistributionVector{<:LogNormal}, B} 
     B == true && return(sum(skipmissing(dv)))
     # uncorrelated, only sum diagonal
-    Ssum = s = zero(T)
+    Ssum = s = zero(eltype(nonmissingtype(eltype(dv))))
     nterm = 0
     for d in dv
         μ,σ = params(d)
@@ -60,9 +61,9 @@ end
 
 # own method with argument isgapfilled, because now cannot use
 # skipmissing any more and need to allocate nonmissing to 
-function Base.sum(dv::DV, isgapfilled::AbstractVector{Bool}; 
-    skipmissings::Val{B} = Val(false)) where 
-    {T<:Real, DV <: AbstractDistributionVector{LogNormal{T}}, B} 
+function Base.sum(dv::AbstractDistributionVector{<:LogNormal}, 
+    isgapfilled::AbstractVector{Bool}; 
+    skipmissings::Val{B} = Val(false)) where B
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
@@ -73,7 +74,7 @@ function Base.sum(dv::DV, isgapfilled::AbstractVector{Bool};
             @inbounds(dv[nonmissing]), @inbounds(isgapfilled[nonmissing])))
     end
     # uncorrelated, only sum diagonal
-    Ssum = s = Ssumnonfilled = zero(T)
+    Ssum = s = Ssumnonfilled = zero(eltype(nonmissingtype(eltype(dv))))#zero(T)
     nterm = 0
     for (i,d) in enumerate(dv)
         μ,σ = params(d)
