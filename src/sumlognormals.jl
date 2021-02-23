@@ -17,7 +17,7 @@ Compute the distribution of the sum of correlated random variables.
    By default missings may result in errors thrown.
 
 Optional second arguments are supported 
-- `corr::AbstractMatrix`: correlation matrix, 
+- `corr::Symmetric(T, <:AbstractMatrix) where T`: correlation matrix, 
 - `acf::AbstractVector`: coefficients of the autocorrelation function starting 
   from lag one
 
@@ -121,7 +121,7 @@ function Base.sum(dv::AbstractDistributionVector{D},
             dv, acf, isgapfilled, storage = storage, skipmissings = skipmissings))
     end
     if M == :bandedmatrix
-        corrM = cormatrix_for_acf(length(dv), acf)
+        corrM = Symmetric(cormatrix_for_acf(length(dv), acf))
         return(sum_lognormals(
             dv, corrM, isgapfilled,skipmissings = skipmissings, storage = storage))
     end
@@ -179,7 +179,7 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
 end
 
 function Base.sum(dv::AbstractDistributionVector{D}, 
-    corr::AbstractMatrix, 
+    corr::Symmetric{DS,<:AbstractMatrix}, 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)); 
     storage::AbstractVector{Union{Missing,DS}} = 
        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
@@ -190,7 +190,7 @@ function Base.sum(dv::AbstractDistributionVector{D},
 end
 
 function sum_lognormals(dv::AbstractDistributionVector{D}, 
-    corr::AbstractMatrix, 
+    corr::Symmetric{DS,<:AbstractMatrix}, 
     isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)); 
     storage::AbstractVector{Union{Missing,DS}} = 
         Vector{Union{Missing,eltype(D)}}(undef, length(dv)),

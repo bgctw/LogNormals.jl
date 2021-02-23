@@ -73,7 +73,7 @@ end;
   dvm = SimpleDistributionVector(LogNormal{eltype(mu)}, mum, sigma)
   #
   @testset "matrix without missing" begin
-    dsum = @inferred sum(dv, corrM )
+    dsum = @inferred sum(dv, Symmetric(corrM))
     # checked with random numbers
     #boot_dvsums_acf(dv, acf1)
     @test params(dsum)[2] ≈ 0.128 rtol = 0.02
@@ -83,9 +83,9 @@ end;
     @test all(params(dsum3) .≈ params(dsum))
   end;
   @testset "matrix with missing" begin
-    @test_throws ErrorException dsumm = sum(dvm, corrM )
+    @test_throws ErrorException dsumm = sum(dvm, Symmetric(corrM))
     #S = similar(mum);
-    dsumm = @inferred sum(dvm, corrM; skipmissings = Val(true) )
+    dsumm = @inferred sum(dvm, Symmetric(corrM); skipmissings = Val(true) )
     # checked from sample
     # boot_dvsums_acf(dvm[2:end], acf1)
     #@test σstar(dsumm) ≈ 1.15 rtol = 0.02
@@ -96,22 +96,25 @@ end;
   end;
   @testset "with gapfilling flag" begin
     isgapfilled = fill(false, length(dv)); isgapfilled[4:end] .= true
-    dsum4 = sum(dv, corrM)
-    dsum = @inferred sum(dv, corrM, isgapfilled)
+    dsum4 = sum(dv, Symmetric(corrM))
+    dsum = @inferred sum(dv, Symmetric(corrM), isgapfilled)
     #@code_warntype sum(dv, isgapfilled)
     @test mean(dsum) == mean(dsum4)
     @test std(dsum) > std(dsum4)
   end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
-    dsum4 = sum(dvm, corrM; skipmissings = Val(true))
-    dsum4b = @inferred sum(dvm, corrM, isgapfilled; skipmissings = Val(true))
+    dsum4 = sum(dvm, Symmetric(corrM); skipmissings = Val(true))
+    dsum4b = @inferred sum(dvm, Symmetric(corrM), isgapfilled; skipmissings = Val(true))
     #@code_warntype sum(dvm, isgapfilled)
     @test mean(dsum4b) == mean(dsum4)
     @test std(dsum4b) > std(dsum4)
     # acf variant 
     dsum5b = @inferred sum(dvm, acf1, isgapfilled; skipmissings = Val(true))
     @test dsum5b == dsum4b
+    dsum5c = @inferred sum(dvm, acf1, isgapfilled; skipmissings = Val(true), 
+        method = Val(:bandedmatrix))
+    @test dsum5c == dsum4b
   end;
 end;  
 
