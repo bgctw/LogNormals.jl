@@ -121,7 +121,10 @@ function Base.iterate(rds::Iterators.Reverse{AbstractDistributionVector},
 end
 Base.firstindex(dv::AbstractDistributionVector) = 1
 Base.lastindex(dv::AbstractDistributionVector) = length(dv)
-Base.getindex(dv::AbstractDistributionVector, i::Number) = dv[convert(Int, i)]
+# function Base.getindex(dv::AbstractDistributionVector, i::Number) 
+#     @info "getindex(dv::AbstractDistributionVector, i::Number)"
+#     dv[convert(Int, i)]
+# end
 
 function StatsBase.params(dv::AbstractDistributionVector, ::Val{i}) where i
     # need to help compile to determine the type of tupvec
@@ -138,13 +141,14 @@ function Random.rand(dv::AbstractDistributionVector, n::Integer)
     vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
     VectorOfArray(vecarr)
 end
-function Random.rand(dv::AbstractDistributionVector{D}) where {F,S,D<:Distribution{F,S}}
+function Random.rand(dv::AbstractDistributionVector)
     x1 = rand(first(skipmissing(dv))) 
     xm = Fill(missing,size(x1))
     #xm = fill(missing,size(x1))
     fmiss(x)::Union{typeof(xm),typeof(x1)} = (ismissing(x) ? xm : rand(x)) 
     vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
-    F <: Univariate ? vecarr : VectorOfArray(vecarr)
+    nonmissingtype(eltype(dv)) <: UnivariateDistribution ? 
+        vecarr : VectorOfArray(vecarr)
 end
 
 # Random.rand(dv::AbstractDistributionVector, dim1::Int) = 
@@ -238,12 +242,14 @@ end
 
 Base.length(dv::SimpleDistributionVector) = length(dv.dvec)
 
-function Base.getindex(dv::SimpleDistributionVector{D,V},i::Int) where {D,V}
-    dv.dvec[i]::Union{Missing, D}
+function Base.getindex(dv::SimpleDistributionVector,i::Int)
+    dv.dvec[i] #::Union{Missing, D}
 end
-Base.getindex(dv::SimpleDistributionVector{D, V}, I) where {D,V} = 
-    SimpleDistributionVector{D,V}(dv.dvec[I])
+function Base.getindex(dv::SimpleDistributionVector, I...)
+    typeof(dv)(dv.dvec[I...])
+    #SimpleDistributionVector{D,V}(dv.dvec[I])
     #Base.typename(DV).wrapper((dv[i] for i in I)...)
+end
 
 
 # params(i) already defined as default in AbstractDistributionVector
@@ -345,21 +351,20 @@ end
 
 Base.length(dv::ParamDistributionVector) = length(first(dv.params))
 
-function Base.getindex(dv::ParamDistributionVector{D,V}, 
-    i::Int)::Union{Missing, D} where {D,V}
+function Base.getindex(dv::ParamDistributionVector, i::Int)
     params_i = getindex.(dv.params, Ref(i))
     any(ismissing.(params_i)) && return missing
-    D(params_i...)
+    nonmissingtype(eltype(dv))(params_i...)
 end
-function Base.getindex(dv::ParamDistributionVector{D, V}, I) where {D,V} 
+function Base.getindex(dv::ParamDistributionVector, I)
     tupvec = map(x -> x[I], dv.params)
-    ParamDistributionVector{D,V}(tupvec)
+    typeof(dv)(tupvec)
+    #ParamDistributionVector{D,V}(tupvec)
     #Base.typename(DV).wrapper((dv[i] for i in I)...)
 end
 
 
-function StatsBase.params(dv::ParamDistributionVector{D,V}, ::Val{i}) where 
-    {D,V,i}
+function StatsBase.params(dv::ParamDistributionVector, ::Val{i}) where i
     # if types of parameters differ, then a union type is returned -> need Val
     dv.params[i]
 end

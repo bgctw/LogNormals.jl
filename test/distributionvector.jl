@@ -60,6 +60,7 @@ end;
     @testset "getindex" begin
         @test isequal(collect(@inferred dv[1:3]), collect(dv))
         @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
+        @test isequal(collect(@inferred dvm[[1,2,3]]), collect(dvm))
     end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)
@@ -185,6 +186,7 @@ end; # testset "SimpleDistributionVector"
     @testset "getindex" begin
         @test isequal(collect(@inferred dv[1:3]), collect(dv))
         @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
+        @test isequal(collect(@inferred dvm[[1,2,3]]), collect(dvm))
     end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)

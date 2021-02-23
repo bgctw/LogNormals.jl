@@ -7,13 +7,14 @@
 # end
 
 """
-    sum(dv::AbstractDistributionVector{D}; skipmissings::Val{B} = Val(false))
+    sum(dv::AbstractDistributionVector; skipmissings::Val{B} = Val(false))
 
 Compute the distribution of the sum of correlated random variables.
 
 # Arguments
 - `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
-- `skipmissing`: Set to `Val(true)` to conciously care for missing in dv
+- `skipmissing`: Set to `Val(true)` to conciously care for missings in dv. 
+   By default missings may result in errors thrown.
 
 Optional second arguments are supported 
 - `corr::AbstractMatrix`: correlation matrix, 
@@ -21,8 +22,10 @@ Optional second arguments are supported
   from lag one
 
 """
-function Base.sum(dv::AbstractDistributionVector{<:D}; 
-    skipmissings::Val{B} = Val(false)) where {D,B} end
+function Base.sum(dv::AbstractDistributionVector; 
+    skipmissings::Val{B} = Val(false)) where {B} 
+    error("sum not defined yet for Distributionvector{$(nonmissingtype(eltype(dv)))}")
+end
 
 """
     sum(dv::AbstractDistributionVector{<:LogNormal})
@@ -35,6 +38,7 @@ of spread with increasing number of observations.
 """
 # function Base.sum(dv::DVM; skipmissings::Val{B} = Val(false)) where 
 #     {T, DV <: AbstractDistributionVector{LogNormal{T}}, DVM <: Union{Base.SkipMissing{DV},DV}, B} 
+# need to keep Type T, to match LogNormal{Float64}, <:LogNormal is also a UnionAll
 function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where 
     {T, DV <: AbstractDistributionVector{LogNormal{T}}, B} 
     B == true && return(sum(skipmissing(dv)))
@@ -98,12 +102,12 @@ function cormatrix_for_acf(n::Int,acf::AbstractVector)
     corrM
 end
 
-function Base.sum(dv::AbstractDistributionVector{<:LogNormal}, 
+function Base.sum(dv::AbstractDistributionVector{D}, 
     acf::AbstractVector{<:Number}, 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)); 
     skipmissings::Val{B} = Val(false), method::Val{S} = Val(:vector)) where 
-    {B, S} 
-    storage = Vector{Union{Missing,eltype(LogNormal)}}(undef, length(dv))
+    {D<:LogNormal, B, S} 
+    storage = Vector{Union{Missing,eltype(D)}}(undef, length(dv))
     if method == Val(:vector) 
         return(sum_lognormals!(
             storage, dv, acf, isgapfilled, skipmissings = skipmissings))
@@ -116,11 +120,13 @@ function Base.sum(dv::AbstractDistributionVector{<:LogNormal},
     error("Unknown method $method")
 end
 
-function sum_lognormals!(S::Vector{Union{Missing,T}}, dv::DV, 
+function sum_lognormals!(S::Vector{Union{Missing,DS}}, 
+    dv::AbstractDistributionVector{D}, 
     acf::AbstractVector, 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)); 
     skipmissings::Val{B} = Val(false)) where 
-    {DV <: AbstractDistributionVector{D}, B} where D<:LogNormal where T
+    #{D<:LogNormal, ST<:, B}
+    {D<:LogNormal, B, DS<:eltype(D)}
     #details<< Implements estimation according to
     # Messica A(2016) A simple low-computation-intensity model for approximating
     # the distribution function of a sum of non-identical lognormals for
@@ -166,14 +172,18 @@ end
 function Base.sum(dv::AbstractDistributionVector{D}, 
     corr::AbstractMatrix, 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)); 
-    skipmissings::Val{B} = Val(false)) where {B, D<:LogNormal}
+    skipmissings::Val{B} = Val(false)) where 
+    {D<:LogNormal, B}
     S = Vector{Union{Missing,eltype(D)}}(undef, length(dv))
     sum_lognormals!(S, dv, corr, isgapfilled, skipmissings = skipmissings)
 end
 
-function sum_lognormals!(S, dv, corr::AbstractMatrix, 
+function sum_lognormals!(S::Vector{Union{Missing,DS}}, 
+    dv::AbstractDistributionVector{D}, 
+    corr::AbstractMatrix, 
     isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)); 
-    skipmissings::Val{l} = Val(false)) where l
+    skipmissings::Val{l} = Val(false)) where 
+    {D<:LogNormal,l, DS<:eltype(D)}
     μ = params(dv, Val(1))
     σ = params(dv, Val(2))
     # S = allowmissing(similar(μ))
