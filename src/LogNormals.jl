@@ -12,7 +12,7 @@ export AbstractMoments, Moments, n_moments, moments,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
     AbstractDistributionVector, SimpleDistributionVector, ParamDistributionVector,
-    sum_lognormals!, 
+    sum_lognormals, 
     cormatrix_for_acf,
     vectuptotupvec
     #paramtypes, 

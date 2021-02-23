@@ -20,8 +20,8 @@ function benchmarkSums()
     @btime dsum_m = sum($dv, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
     #
     #S = similar(mum);
-    @code_warntype sum_lognormals!(S, dv, acf1, skipmissings = Val(true))
-    f() = sum_lognormals!(S, dv, acf1, skipmissings = Val(true))
+    @code_warntype sum_lognormals(S, dv, acf1, skipmissings = Val(true))
+    f() = sum_lognormals(S, dv, acf1, skipmissings = Val(true))
     @time f(); @time f()
 
 
@@ -53,7 +53,7 @@ function benchmarkSums()
     #     #@show Ssum, s, length(S) - nmissing
     #     LogNormal(μ_sum, √σ2eff)  
     # end
-    # @btime sum_lognormals!($storage, $dv, $corMa, skipmissings = Val(true) )
+    # @btime sum_lognormals($storage, $dv, $corMa, skipmissings = Val(true) )
     # @btime sum_lognormals2!($storage, $dv, $corMa, skipmissings = Val(true) )
 end
 

@@ -42,7 +42,7 @@ end
         dsum3 = @inferred sum(dv; skipmissings = Val(true))
         @test dsum3 == d1
         #@btime sum(skipmissing($dv)) # does not allocate
-    end
+    end;
     @testset "with gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1);
       isgapfilled = [true, false, false]
@@ -51,7 +51,7 @@ end
       #@code_warntype sum(dv, isgapfilled)
       @test mean(dsum) == mean(dsum4)
       @test std(dsum) > std(dsum4)
-    end
+    end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
       isgapfilled = [true, true, false, false]
@@ -59,7 +59,7 @@ end
       dsum = @inferred sum(dv, isgapfilled; skipmissings = Val(true))
       #@code_warntype sum(dv, isgapfilled; skipmissings = Val(true))
       @test dsum == dsum5
-    end
+    end;
 end;
 
 @testset "few correlated vars" begin
@@ -81,7 +81,7 @@ end;
     # acf variant
     dsum3 = @inferred sum(dv, acf1)
     @test all(params(dsum3) .≈ params(dsum))
-  end
+  end;
   @testset "matrix with missing" begin
     @test_throws ErrorException dsumm = sum(dvm, corrM )
     #S = similar(mum);
@@ -101,7 +101,7 @@ end;
     #@code_warntype sum(dv, isgapfilled)
     @test mean(dsum) == mean(dsum4)
     @test std(dsum) > std(dsum4)
-  end
+  end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
     dsum4 = sum(dvm, corrM; skipmissings = Val(true))
