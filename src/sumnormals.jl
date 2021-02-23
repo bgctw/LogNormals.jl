@@ -29,18 +29,20 @@ function Base.sum(dv::AbstractDistributionVector{<:Normal},
             @inbounds(dv[nonmissing]), @inbounds(isgapfilled[nonmissing])))
     end
     # uncorrelated, only sum diagonal
-    Ssum = s = zero(eltype(nonmissingtype(eltype(dv))))
+    Ssum = s = Ssumnonfilled = zero(eltype(nonmissingtype(eltype(dv))))
     nterm = 0
     for (i,d) in enumerate(dv)
         μ,σ = params(d)
         Ssum += μ
         if !isgapfilled[i]
+            Ssumnonfilled += μ
             s += abs2(σ)
             nterm += 1
         end
     end
     nterm > 0 || error("Expected at least one nonmissing term, but mu = $μ")
-    Normal(Ssum, √s)
+    relerr = √s/Ssumnonfilled
+    Normal(Ssum, Ssum * relerr)
 end
 
 

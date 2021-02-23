@@ -31,7 +31,9 @@ using Test, Distributions, LinearAlgebra, Missings
       dsum = @inferred sum(dv, isgapfilled)
       #@code_warntype sum(dv, isgapfilled)
       @test mean(dsum) == mean(sum(dv)) # mean takes all into account
-      @test std(dsum) == std(sum(dv[.!isgapfilled]))   # uncertainty only the non-gapfilled
+      @test std(dsum) > std(sum(dv))
+      dsumn = sum(dv[.!isgapfilled])
+      @test std(dsum)/mean(dsum) == std(dsumn)/mean(dsumn)   # relative error like non-gapfilled
     end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
