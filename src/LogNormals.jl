@@ -41,6 +41,9 @@ include("logitnormal.jl")
 # SimpleDistributionVector type
 include("distributionvector.jl")
 
+# types and method docu for sum of distributions
+include("sumdistributionvector.jl")
+
 # sum of normal random variables
 include("sumnormals.jl")
 

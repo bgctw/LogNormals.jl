@@ -1,5 +1,11 @@
 # Sum of correlated random variables
 
 ```@docs
-sum(dv::AbstractDistributionVector{D}; skipmissings::Val{B} = Val(false)) where {D,B}
+sum(::AbstractDistributionVector)
+```
+
+If correlations are only dependent on the distance of records, one can specify
+these correlation by a vector starting with distance, i.e. lag, 1.
+```@docs
+AutoCorrelationFunction
 ```

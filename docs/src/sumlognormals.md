@@ -2,11 +2,9 @@
 
 Method sum for a `DistributionVector{<:LogNormal}`
 computes approximation of the distribution of the sum of the
-corresponding lognormal variables..
+corresponding lognormal variables.
 
-```@docs
-sum(Union{Base.SkipMissing{DV},DV}; skipmissings::Val{B} = Val(false)) where {T, DV <: AbstractDistributionVector{LogNormal{T}}, B}
-```
+See documentation of the [`sum`](@ref) function.
 
 In the following example the computed approximation is compared
 to a bootstrap sample of sums over three correlated random variables.
@@ -15,7 +13,7 @@ to a bootstrap sample of sums over three correlated random variables.
 using Distributions,LogNormals
 mu = log.([110,100,80])
 sigma = log.([1.2,1.5,1.1])
-acf1 = [0.4,0.1]
+acf1 = AutoCorrelationFunction([0.4,0.1])
 dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
 dsum = sum(dv, acf1)
 ```

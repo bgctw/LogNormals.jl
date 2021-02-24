@@ -1,32 +1,3 @@
-"""
-    sum(dv::AbstractDistributionVector; skipmissings::Val{B} = Val(false))
-
-Compute the distribution of the sum of correlated random variables.
-
-# Arguments
-- `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
-
-Optional second arguments is supported of either
-- `corr::Symmetric(T, <:AbstractMatrix) where T`: correlation matrix, or
-- `acf::AutoCorrelationFunction`: coefficients of the autocorrelation function 
-
-Keyword arguments:
-- `skipmissing`: Set to `Val(true)` to conciously care for missings in dv. 
-- `isgapfilled::AbstractVector{Bool}`: set to true for records that should
-   contribute to the sum but not to the decrease of relative uncertainty
-   with increasing number of records, e.g. for missing records that have
-   been estimated (gapfilled). 
-
-The sums of correlated variables require extra allocation and 
-support an additional keyword parameter  
-- `storage`: a mutable `AbstractVector{eltype(D)}` of length of `dv` 
-  that provides storage space to avoid additional allocations.
-"""
-function sum(dv::AbstractDistributionVector)
-    error("sum not defined yet for " * 
-    "Distributionvector{$(nonmissingtype(eltype(dv)))}")
-end
-
 function sum(dv::AbstractDistributionVector{<:LogNormal}; 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     skipmissings::Val{B} = Val(false)) where B
