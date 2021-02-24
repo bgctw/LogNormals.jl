@@ -1,37 +1,19 @@
 using LogNormals
-using Test, Distributions, LinearAlgebra, Missings, StatsBase
+using Test, Distributions, LinearAlgebra, Missings
 
-function boot_dvsum(dv, nboot = 100_000)
-    nboot = 100_000
-    x = rand(dv, nboot);
-    sums = vec(sum(x, dims = 2));
-    params(fit(LogNormal,sums))
-end
-
-function boot_dvsums_acf(dv, acf, nboot = 10_000)
-    # test sum formula by bootstrap sample
-    μ, σ = params(dv)
-    Sigma = Diagonal(σ) * cormatrix_for_acf(length(dv), acf) * Diagonal(σ);
-    dn = MvNormal(disallowmissing(μ), Symmetric(Sigma));
-    x = rand(dn, nboot) .|> exp
-    sums = vec(sum(x, dims = 1))
-    #density(sums)
-    drsum = fit(LogNormal, sums)
-end
-
-@testset "sumlognormals" begin
+@testset "sumnormals" begin
 
 @testset "two vars uncorrelated" begin
     # generate nSample values of two lognormal random variables
-    d1 = LogNormal(log(110), 0.25)
-    d2 = LogNormal(log(100), 0.15)
+    d1 = Normal(2, 0.15)
+    d2 = Normal(3, 0.25)
     dv = SimpleDistributionVector(d1, d2);
     dsum = @inferred sum(dv)
     @testset "no missings" begin
-        @test params(dsum)[1] ≈ log(210) rtol = 0.02 
+        @test params(dsum)[1] ≈ 5
         # checked with random numbers 
         #boot_dvsum(dv)
-        @test params(dsum)[2] ≈ 0.15 rtol = 0.02
+        @test params(dsum)[2] ≈ sqrt(abs2(0.15) + abs2(0.25))
     end;
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
@@ -46,81 +28,83 @@ end
     @testset "with gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1);
       isgapfilled = [true, false, false]
-      dsum4 = @inferred sum(dv)
-      dsum = @inferred sum(dv, isgapfilled=isgapfilled)
-      #@code_warntype sum(dv, isgapfilled=isgapfilled)
-      @test mean(dsum) == mean(dsum4)
-      @test std(dsum) > std(dsum4)
+      dsum = @inferred sum(dv, isgapfilled =isgapfilled)
+      #@code_warntype sum(dv, isgapfilled)
+      @test mean(dsum) == mean(sum(dv)) # mean takes all into account
+      @test std(dsum) > std(sum(dv))
+      dsumn = sum(dv[.!isgapfilled])
+      # relative error like non-gapfilled
+      @test std(dsum)/mean(dsum) == std(dsumn)/mean(dsumn)   
     end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
       isgapfilled = [true, true, false, false]
       dsum5 = @inferred sum(dv[1:3], isgapfilled=isgapfilled[1:3])
-      dsum = @inferred sum(dv, isgapfilled=isgapfilled, skipmissings = Val(true))
-      #@code_warntype sum(dv, isgapfilled=isgapfilled, skipmissings = Val(true))
+      dsum = @inferred sum(dv, isgapfilled=isgapfilled, skipmissings=Val(true))
+      #@code_warntype sum(dv, isgapfilled; skipmissings = Val(true))
       @test dsum == dsum5
     end;
 end;
 
 @testset "few correlated vars" begin
-  mu = log.([110,100,80,120,160.0])
-  sigma = log.([1.2,1.5,1.1,1.3,1.1])
+  mu = [110,100,80,120,160.0]
+  sigma = [20.0,50,10,30,10]
   acf1 = @inferred AutoCorrelationFunction([0.4,0.1])
   n = length(mu)
   corrM = @inferred cormatrix_for_acf(n, acf1)
-  dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
+  dv = SimpleDistributionVector(Normal{eltype(mu)}, mu, sigma);
   mum = allowmissing(mu); mum[1] = missing
-  dvm = SimpleDistributionVector(LogNormal{eltype(mu)}, mum, sigma)
+  dvm = SimpleDistributionVector(Normal{eltype(mu)}, mum, sigma)
   #
   @testset "matrix without missing" begin
     dsum = @inferred sum(dv, Symmetric(corrM))
     # checked with random numbers
     #boot_dvsums_acf(dv, acf1)
-    @test params(dsum)[2] ≈ 0.128 rtol = 0.02
     @test mean(dsum) ≈ sum(mean.(dv))
-    # acf variant
-    dsum3 = @inferred sum(dv, acf1)
-    @test all(params(dsum3) .≈ params(dsum))
+    dsumuncorr = sum(dv)
+    @test params(dsum)[2] > params(dsumuncorr)[2]
+    # explicit sum over covariance Sigma
+    Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
+    @test params(dsum)[2] == sqrt(sum(Sigma))
   end;
   @testset "matrix with missing" begin
-    @test_throws ErrorException dsumm = sum(dvm, Symmetric(corrM))
+    @test_throws Exception dsumm = sum(dvm, Symmetric(corrM))
     #S = similar(mum);
     dsumm = @inferred sum(dvm, Symmetric(corrM); skipmissings = Val(true) )
-    # checked from sample
-    # boot_dvsums_acf(dvm[2:end], acf1)
-    #@test σstar(dsumm) ≈ 1.15 rtol = 0.02
-    @test params(dsumm)[2] ≈ 0.141 rtol = 0.02
-    @test_throws ErrorException dsumm2 = sum(dvm, acf1)
-    dsumm2 = @inferred sum(dvm, acf1; skipmissings = Val(true))
-    @test all(params(dsumm2) .≈ params(dsumm))
+    params(dsumm) == params(sum(dvm[2:end], Symmetric(corrM[2:end,2:end])))
   end;
   @testset "with gapfilling flag" begin
     isgapfilled = fill(false, length(dv)); isgapfilled[4:end] .= true
     dsum4 = sum(dv, Symmetric(corrM))
     dsum = @inferred sum(dv, Symmetric(corrM), isgapfilled=isgapfilled)
-    #@code_warntype sum(dv, isgapfilled=isgapfilled)
+    #@code_warntype sum(dv, isgapfilled)
     @test mean(dsum) == mean(dsum4)
     @test std(dsum) > std(dsum4)
+    # test with explicit sum over Sigma and same relative error
+    ifin = .!isgapfilled
+    Sigma = Diagonal(sigma[ifin]) * corrM[ifin,ifin] * Diagonal(sigma[ifin])
+    @test std(dsum)/mean(dsum) == sqrt(sum(Sigma))/sum(mu[ifin])
   end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
     dsum4 = sum(dvm, Symmetric(corrM); skipmissings = Val(true))
     dsum4b = @inferred sum(
       dvm, Symmetric(corrM), isgapfilled=isgapfilled, skipmissings = Val(true))
-    #@code_warntype sum(dvm, isgapfilled=isgapfilled)
+    #@code_warntype sum(dvm, isgapfilled)
     @test mean(dsum4b) == mean(dsum4)
     @test std(dsum4b) > std(dsum4)
-    # acf variant 
-    dsum5b = @inferred sum(
-      dvm, acf1, isgapfilled=isgapfilled, skipmissings = Val(true))
-    @test dsum5b == dsum4b
-    dsum5c = @inferred sum(
-      dvm, acf1, isgapfilled=isgapfilled; skipmissings = Val(true), 
-      method = Val(:bandedmatrix))
-    @test dsum5c == dsum4b
+    # test with explicit sum over Sigma and same relative error
+    ifin = .!(isgapfilled .| ismissing.(dvm))
+    Sigma = Diagonal(sigma[ifin]) * corrM[ifin,ifin] * Diagonal(sigma[ifin])
+    @test std(dsum4b)/mean(dsum4b) == sqrt(sum(Sigma))/sum(mu[ifin])
+    # 
+    # acf variant
+    dsum4c = @inferred sum(
+      dvm, acf1, isgapfilled=isgapfilled; skipmissings = Val(true))
+    @test dsum4c == dsum4b
   end;
 end;  
 
-end; # testset "sumlognormals"
+end; # testset "sumnormals"
 # see also conde in sumlognormals_benchmark.jl
 # could not stay here because of btime macro

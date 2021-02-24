@@ -33,7 +33,7 @@ LogNormals.σstar(::LogNormal)
 ```
 
 ```@docs
-Distributions.fit(::Type{LogNormal}, ::Any, ::Σstar) 
+StatsBase.fit(::Type{LogNormal}, ::Any, ::Σstar) 
 ```
 
 ```@docs

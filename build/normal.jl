@@ -1,9 +1,9 @@
-function Distributions.fit(::Type{Normal}, m::AbstractMoments)
+function StatsBase.fit(::Type{Normal}, m::AbstractMoments)
     n_moments(m) >= 2 || error("Need mean and variance to estimate normal")
     return Normal(mean(m),std(m))
 end
 
-function Distributions.fit(::Type{Normal}, lower::QuantilePoint, upper::QuantilePoint)
+function StatsBase.fit(::Type{Normal}, lower::QuantilePoint, upper::QuantilePoint)
     # https://www.johndcook.com/quantiles_parameters.pdf
     if (upper < lower) 
         lower,upper = (upper,lower)

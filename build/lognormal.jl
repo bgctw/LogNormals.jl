@@ -1,4 +1,4 @@
-function Distributions.fit(::Type{LogNormal}, m::AbstractMoments)
+function StatsBase.fit(::Type{LogNormal}, m::AbstractMoments)
     # https://en.wikipedia.org/wiki/Log-normal_distribution
     n_moments(m) >= 2 || error("Need mean and variance to estimate lognormal")
     γ = 1+var(m)/mean(m)^2
@@ -7,7 +7,7 @@ function Distributions.fit(::Type{LogNormal}, m::AbstractMoments)
     return LogNormal(μ,σ)
 end
 
-function Distributions.fit(::Type{LogNormal}, lower::QuantilePoint, upper::QuantilePoint)
+function StatsBase.fit(::Type{LogNormal}, lower::QuantilePoint, upper::QuantilePoint)
     #length(qset) == 2 || error("only implemented yet for exactly two quantiles.")
     #qset_log = [QuantilePoint(qp, q = log(qp.q)) for qp in qset]
     lower_log = QuantilePoint(lower, q = log(lower.q))

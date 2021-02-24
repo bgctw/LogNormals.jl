@@ -61,12 +61,9 @@ Get the first N moments of a distribution.
 See also type [`AbstractMoments`](@ref).
 
 ## Examples
-```jldoctest; output = false, filter = r"Moments{4,", setup = :(using Statistics,Distributions,LogNormals)
+```julia
 moments(LogNormal(), Val(4))  # first four moments 
 moments(Normal())  # mean and variance
-
-# output
-Moments{2,Float64}([0.0, 1.0])
 ```
 """
 function moments(d::Distribution, ::Val{N} = Val(2)) where N 
@@ -112,7 +109,7 @@ d = fit(LogNormal, moments(Normal(3,1.2)));
 plot(d); lines(!Normal(3,1.2))
 ```
 """
-Distributions.fit(::Type{D}, m::AbstractMoments) where {D<:Distribution} = 
+StatsBase.fit(::Type{D}, m::AbstractMoments) where {D<:Distribution} = 
     error("fitting to moments not implemented for distribution of type $D")
 
 
@@ -175,7 +172,7 @@ quantile.(d, [0.5, 0.975]) ≈ [3,5]
 true
 ```
 """
-Distributions.fit(::Type{D}, lower::QuantilePoint, upper::QuantilePoint) where D<:Distribution =
+StatsBase.fit(::Type{D}, lower::QuantilePoint, upper::QuantilePoint) where D<:Distribution =
     error("fitting to two quantile points not implemented for distribution of type $D")
 
 fit_median_quantile(D::Type{DT}, median, qp::QuantilePoint) where {DT <: Distribution} = 
@@ -209,12 +206,13 @@ d = fit(LogNormal, 5, @qp_uu(14), Val(:mode));
 (true, true)
 ```
 """
-function Distributions.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where {D<:Distribution, stats}
+function StatsBase.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val(:mean)) where {D<:Distribution, stats}
     stats == :mean && return(fit_mean_quantile(D, val, qp))
     stats == :mode && return(fit_mode_quantile(D, val, qp))
     stats == :median && return(fit_median_quantile(D, val, qp))
     error("unknown stats: $stats")
-end
+end;
+
 
 
 

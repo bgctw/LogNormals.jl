@@ -19,6 +19,11 @@ julia> five = plusTwo(3)
 """
 plusTwo(x) = return x+2
 
+# function length_itr(x)
+#     typeof(Base.IteratorSize(x)) <: Union{Base.HasShape, Base.HasLength} && 
+#         return(length(x))
+#     count(x -> true, x)
+# end
 
 
 M = Moments(3)
@@ -31,7 +36,7 @@ using StaticArrays, Distributions
 
 D = fit(LogNormal, @qp_m(3), @qp_uu(9))
 
-function Distributions.fit(::Type{LogNormal}; mean::Real, mult_std::Real)
+function StatsBase.fit(::Type{LogNormal}; mean::Real, mult_std::Real)
     sigma = log(mult_std)
     mu = log(mean) - sigma*sigma/2
     LogNormal(mu, sigma)
@@ -82,7 +87,120 @@ function experimentAR1()
     autocor(x, 1:10)
 end
 
-d = LogNormal(log(2), log(1.2))
-σstar(d) == 1.2
-d = fit(LogNormal, 2, Σstar(1.2))
-(mean(d), σstar(d)) == (2, 1.2)  
+tvec = allowmissing([(rand(),rand()) for i=1:6]);
+tvec[1] = missing
+c = mappedarray(x-> ismissing(x) ? missing : first(x),tvec);
+c[1]
+c[1:2]
+c[[1,2]]
+
+using BenchmarkTools: @btime
+using Test
+
+
+x = [missing, 1.0];
+y = [missing, 2.0];
+f(x,y) = x[1] * y[1] * x[2] * y[2];
+@btime f($x,$y)
+
+function f1(x,y)
+    s = zero(eltype(x))
+    for i in axes(x,1), j in axes(y,1)
+        sij = x[i] * x[j] * y[i] * y[j]
+        if !ismissing(sij) 
+            s += sij
+        end
+    end
+    s
+end
+@btime f1($x,$y)
+
+f2(x,y) = sum(skipmissing(x[i] * x[j] + y[i] * y[j] for i in axes(x,1), j in axes(y,1)))
+@btime f2($x,$y)
+
+
+mul4(x1,x2,x3,x4) = x1 * x2 * x3 * x4
+function f(x,y)
+    s = zero(nonmissingtype(eltype(x)))
+    for i in axes(x,1), j in axes(y,1)
+        sij = passmissing(+)(x[i] * x[j],  y[i] * y[j])
+        if !ismissing(sij) 
+            s += sij::nonmissingtype(eltype(x))
+        end
+    end
+    s
+end
+@code_warntype f(x,y)
+@time f(x,y); @time f(x,y)
+
+function f(x,y)
+    T = nonmissingtype(eltype(x))
+    s = zero(T)
+    for i in axes(x,1), j in axes(y,1)
+        #if !any(ismissing.((x[i], x[j], y[i], y[j])))
+        if !ismissing(x[i]) && !ismissing(x[j]) && !ismissing(y[i]) && !ismissing(y[i]) 
+            sij = x[i] * x[j] + y[i] * y[j]
+            s += sij::T
+        end
+    end
+    s
+end
+#@code_warntype f(x,y)
+@time f(x,y); @time f(x,y)
+
+
+f2(x,y) = sum(skipmissing(x[i] * x[j] * y[i] * y[j] for i in axes(x,1), j in axes(y,1)))
+@btime f2($x,$y)
+
+
+
+f() = *(x[1], y[1], x[2], y[2])
+@time f(); @time f()
+
+# fast compiler code works on value-type keyword argument
+function f(;sk::Val{B} = Val(true)) where B
+    B==true && return(1)
+    2
+end
+f()
+@code_llvm f()
+@code_llvm f(sk=Val(false))
+
+#modifying several arrays with one filter in the same loop
+function f!(a,b,F)
+    for i in Iterators.filter(F, 1:length(a))
+        a[i] = 0
+        b[i] = 1
+    end
+    a,b
+end
+a = collect(1:5)
+b = collect(1:5)
+isgapfilled = falses(5); isgapfilled[3] = true
+f!(a,b, (i -> isgapfilled[i]))
+
+
+function f(dv::AbstractDistributionVector{D}) where {D<:Distribution} 
+    x1 = rand(first(skipmissing(dv)))
+    fmiss(x) = ismissing(x) ? missing : rand(x)
+    allowmissing(fmiss.(dv))::Vector{Union{Missing,typeof(x1)}} 
+end
+f(dv)
+@code_warntype f(dv)
+
+
+x = [missing, 1.0];
+y = [missing, 2.0]
+g(x) = 2 * x
+function f(x)
+    #collect(eltype(x), g.(x))::Vector{eltype(x)}
+    typeof(x)(g.(x))::typeof(x)
+end
+f(x)
+@inferred f(x)
+
+using StaticArrays
+xs = SVector(missing , 2.0)
+@inferred f(xs)
+
+

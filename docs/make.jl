@@ -1,5 +1,5 @@
 using Documenter
-using LogNormals, Distributions
+using LogNormals, Distributions, StatsBase, StatsPlots
 
 push!(LOAD_PATH,"../src/")
 # need to add Statistics and Distributions to Project.toml in docs/
@@ -10,6 +10,8 @@ makedocs(sitename="LogNormals.jl",
             "Home" => "index.md",
             "LogNormal properties" => "lognormalprops.md",
             "Fit to statistic" => "fitstats.md",
+            "Vector of random variables" => "distributionvector.md",
+            "Sum of random variables" => "sumdist.md",
             "Sum LogNormals" => "sumlognormals.md",
          ],
          modules = [LogNormals],

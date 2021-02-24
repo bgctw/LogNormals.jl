@@ -6,10 +6,11 @@ include("fitstats.jl")
 
 include("normal.jl")
 include("lognormal.jl")
-include("normal.jl")
 include("logitnormal.jl")
 
+include("distributionvector.jl")
 include("sumlognormals.jl")
+include("sumnormals.jl")
 
 
 
