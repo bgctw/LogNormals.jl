@@ -9,7 +9,7 @@ Compute the distribution of the sum of correlated random variables.
 - `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
 
 An optional second arguments supports correlation between random variables.
-- `corr::Symmetric(T, <:AbstractMatrix) where T`: correlation matrix, or
+- `corr::Symmetric`: correlation matrix, or
 - `acf::AutoCorrelationFunction`: coefficients of the 
    [`AutoCorrelationFunction`](@ref)
 
@@ -34,7 +34,7 @@ end#,
 #     "Distributionvector{$(nonmissingtype(eltype(dv)))}")
 # end,
 # function sum(dv::AbstractDistributionVector{D}, 
-#     corr::Symmetric{DS,<:AbstractMatrix}) where
+#     corr::Symmetric) where
 #     {D<:Distribution, DS<:eltype(D)}
 #     error("sum not defined yet for " * 
 #     "Distributionvector{$(nonmissingtype(eltype(dv)))}")

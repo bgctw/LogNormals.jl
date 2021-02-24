@@ -44,7 +44,7 @@ end
 
 
 function sum(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric{DS,<:AbstractMatrix}; 
+    corr::Symmetric; 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
@@ -56,7 +56,7 @@ function sum(dv::AbstractDistributionVector{D},
 end
 
 function sum_normals(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric{DS,<:AbstractMatrix}; 
+    corr::Symmetric; 
     isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
         Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
