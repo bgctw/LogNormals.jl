@@ -7,7 +7,7 @@ Tools that help using the LogNormal distribution.
 module LogNormals
 
 export AbstractMoments, Moments, n_moments, moments,
-    QuantilePoint, Σstar, σstar, #length_itr,
+    QuantilePoint, Σstar, σstar, 
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
@@ -18,12 +18,13 @@ export AbstractMoments, Moments, n_moments, moments,
     cormatrix_for_acf,
     vectuptotupvec
 
+import Random: rand
+import Base: sum
+import StatsBase: coef
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays
 using Random
-import Random: GLOBAL_RNG, rand
-import Base: sum
 
 # general fitting to statistics
 include("fitstats.jl")

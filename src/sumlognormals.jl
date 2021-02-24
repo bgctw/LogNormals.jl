@@ -22,20 +22,12 @@ support an additional keyword parameter
 - `storage`: a mutable `AbstractVector{eltype(D)}` of length of `dv` 
   that provides storage space to avoid additional allocations.
 """
-function Base.sum(dv::AbstractDistributionVector)
-    error("sum not defined yet for Distributionvector{$(nonmissingtype(eltype(dv)))}")
+function sum(dv::AbstractDistributionVector)
+    error("sum not defined yet for " * 
+    "Distributionvector{$(nonmissingtype(eltype(dv)))}")
 end
 
-"""
-    sum(dv::AbstractDistributionVector{<:LogNormal})
-
-In addition to [`sum(AbstractDistributionVector{<:Distribution})`](@ref) 
-supports a third 
-argument of type `AbstractVector{Bool}` of the same length as `dv`. Flagged
-records contribute to the estimate mean of the sum, but not to the decrease
-of spread with increasing number of observations.
-"""
-function Base.sum(dv::AbstractDistributionVector{<:LogNormal}; 
+function sum(dv::AbstractDistributionVector{<:LogNormal}; 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     skipmissings::Val{B} = Val(false)) where B
     length(dv) == length(isgapfilled) || error(
@@ -67,7 +59,7 @@ function Base.sum(dv::AbstractDistributionVector{<:LogNormal};
 end
 
 
-function Base.sum(dv::AbstractDistributionVector{D}, 
+function sum(dv::AbstractDistributionVector{D}, 
     acf::AutoCorrelationFunction; 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)), 
     storage::AbstractVector{Union{Missing,ST}} = 
@@ -141,7 +133,7 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     LogNormal(μ_sum, √σ2eff)  
 end
 
-function Base.sum(dv::AbstractDistributionVector{D}, 
+function sum(dv::AbstractDistributionVector{D}, 
     corr::Symmetric{DS,<:AbstractMatrix}; 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 

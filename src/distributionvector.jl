@@ -133,7 +133,8 @@ function StatsBase.params(dv::AbstractDistributionVector, ::Val{i}) where i
     collect(Tm, passmissing(getindex).(passmissing(params).(dv),i))::Vector{Tm}
 end
 
-function Random.rand(dv::AbstractDistributionVector, n::Integer) 
+# extends Random
+function rand(dv::AbstractDistributionVector, n::Integer) 
     x1 = rand(first(skipmissing(dv)), n)
     xm = Fill(missing,size(x1))
     #xm = fill(missing,size(x1))
@@ -141,7 +142,7 @@ function Random.rand(dv::AbstractDistributionVector, n::Integer)
     vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
     VectorOfArray(vecarr)
 end
-function Random.rand(dv::AbstractDistributionVector)
+function rand(dv::AbstractDistributionVector)
     x1 = rand(first(skipmissing(dv))) 
     xm = Fill(missing,size(x1))
     #xm = fill(missing,size(x1))
@@ -150,12 +151,6 @@ function Random.rand(dv::AbstractDistributionVector)
     nonmissingtype(eltype(dv)) <: UnivariateDistribution ? 
         vecarr : VectorOfArray(vecarr)
 end
-
-# Random.rand(dv::AbstractDistributionVector, dim1::Int) = 
-#     rand(GLOBAL_RNG, dv, dim1)
-# Random.rand(rng::AbstractRNG, dv::AbstractDistributionVector{D}, 
-#     dim1::Int) where D = [rand(dv) for i in 1:dim1]
-
 
 ## SimpleDistributionVector   
 """

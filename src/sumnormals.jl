@@ -21,7 +21,8 @@ true
 struct AutoCorrelationFunction{T}
     coef::T
 end
-StatsBase.coef(acf::AutoCorrelationFunction) = acf.coef
+# implements StatsBase coef
+coef(acf::AutoCorrelationFunction) = acf.coef
 AutoCorrelationFunction(coef::AbstractVector{<:Number}) = 
     AutoCorrelationFunction{typeof(coef)}(coef)
 
@@ -40,7 +41,7 @@ end
 
 
 
-function Base.sum(dv::AbstractDistributionVector{<:Normal}; 
+function sum(dv::AbstractDistributionVector{<:Normal}; 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)), 
     skipmissings::Val{B} = Val(false)) where B
     length(dv) == length(isgapfilled) || error(
@@ -70,7 +71,7 @@ function Base.sum(dv::AbstractDistributionVector{<:Normal};
     Normal(Ssum, Ssum * relerr)
 end
 
-function Base.sum(dv::AbstractDistributionVector{D}, 
+function sum(dv::AbstractDistributionVector{D}, 
     acf::AutoCorrelationFunction;
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
@@ -85,7 +86,7 @@ function Base.sum(dv::AbstractDistributionVector{D},
 end
 
 
-function Base.sum(dv::AbstractDistributionVector{D}, 
+function sum(dv::AbstractDistributionVector{D}, 
     corr::Symmetric{DS,<:AbstractMatrix}; 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
