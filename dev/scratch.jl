@@ -19,6 +19,11 @@ julia> five = plusTwo(3)
 """
 plusTwo(x) = return x+2
 
+# function length_itr(x)
+#     typeof(Base.IteratorSize(x)) <: Union{Base.HasShape, Base.HasLength} && 
+#         return(length(x))
+#     count(x -> true, x)
+# end
 
 
 M = Moments(3)

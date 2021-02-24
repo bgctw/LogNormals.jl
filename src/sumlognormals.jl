@@ -1,11 +1,3 @@
-
-
-# function length_itr(x)
-#     typeof(Base.IteratorSize(x)) <: Union{Base.HasShape, Base.HasLength} && 
-#         return(length(x))
-#     count(x -> true, x)
-# end
-
 """
     sum(dv::AbstractDistributionVector; skipmissings::Val{B} = Val(false))
 
@@ -13,21 +5,24 @@ Compute the distribution of the sum of correlated random variables.
 
 # Arguments
 - `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
-- `skipmissing`: Set to `Val(true)` to conciously care for missings in dv. 
-   By default missings may result in errors thrown.
 
-Optional second arguments are supported 
-- `corr::Symmetric(T, <:AbstractMatrix) where T`: correlation matrix, 
-- `acf::AbstractVector`: coefficients of the autocorrelation function starting 
-  from lag one
+Optional second arguments is supported of either
+- `corr::Symmetric(T, <:AbstractMatrix) where T`: correlation matrix, or
+- `acf::AutoCorrelationFunction`: coefficients of the autocorrelation function 
+
+Keyword arguments:
+- `skipmissing`: Set to `Val(true)` to conciously care for missings in dv. 
+- `isgapfilled::AbstractVector{Bool}`: set to true for records that should
+   contribute to the sum but not to the decrease of relative uncertainty
+   with increasing number of records, e.g. for missing records that have
+   been estimated (gapfilled). 
 
 The sums of correlated variables require extra allocation and 
 support an additional keyword parameter  
 - `storage`: a mutable `AbstractVector{eltype(D)}` of length of `dv` 
   that provides storage space to avoid additional allocations.
 """
-function Base.sum(dv::AbstractDistributionVector; 
-    skipmissings::Val{B} = Val(false)) where {B} 
+function Base.sum(dv::AbstractDistributionVector)
     error("sum not defined yet for Distributionvector{$(nonmissingtype(eltype(dv)))}")
 end
 
@@ -40,42 +35,17 @@ argument of type `AbstractVector{Bool}` of the same length as `dv`. Flagged
 records contribute to the estimate mean of the sum, but not to the decrease
 of spread with increasing number of observations.
 """
-# function Base.sum(dv::DVM; skipmissings::Val{B} = Val(false)) where 
-#     {T, DV <: AbstractDistributionVector{LogNormal{T}}, DVM <: Union{Base.SkipMissing{DV},DV}, B} 
-# need to keep Type T, to match LogNormal{Float64}, <:LogNormal is also a UnionAll
-function Base.sum(dv::Union{Base.SkipMissing{DV},DV}; 
-    skipmissings::Val{B} = Val(false)) where 
-    {DV <: AbstractDistributionVector{<:LogNormal}, B} 
-    B == true && return(sum(skipmissing(dv)))
-    # uncorrelated, only sum diagonal
-    Ssum = s = zero(eltype(nonmissingtype(eltype(dv))))
-    nterm = 0
-    for d in dv
-        μ,σ = params(d)
-        Si = exp(μ + abs2(σ)/2)
-        Ssum += Si
-        s += abs2(σ) * abs2(Si)
-        nterm += 1
-    end
-    nterm > 0 || error("Expected at least one nonmissing term, but mu = $μ")
-    σ2eff = s/abs2(Ssum)
-    μ_sum = log(Ssum) - σ2eff/2
-    LogNormal(μ_sum, √σ2eff)
-end
-
-# own method with argument isgapfilled, because now cannot use
-# skipmissing any more and need to allocate nonmissing to 
-function Base.sum(dv::AbstractDistributionVector{<:LogNormal}, 
-    isgapfilled::AbstractVector{Bool}; 
+function Base.sum(dv::AbstractDistributionVector{<:LogNormal}; 
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     skipmissings::Val{B} = Val(false)) where B
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
     if B == true
-        # need to allocate anyway with subsetting
         nonmissing = findall(.!ismissing.(dv))
-        return(sum(
-            @inbounds(dv[nonmissing]), @inbounds(isgapfilled[nonmissing])))
+        !isempty(nonmissing) && return(sum(
+            @inbounds(dv[nonmissing]), 
+            isgapfilled=@inbounds(isgapfilled[nonmissing])))
     end
     # uncorrelated, only sum diagonal
     Ssum = s = Ssumnonfilled = zero(eltype(nonmissingtype(eltype(dv))))#zero(T)
@@ -97,19 +67,9 @@ function Base.sum(dv::AbstractDistributionVector{<:LogNormal},
 end
 
 
-function cormatrix_for_acf(n::Int,acf::AbstractVector) 
-    nacf::Int = length(acf)
-    corrM = BandedMatrix{Float64}(undef, (n,n), (nacf,nacf))
-    corrM[band(0)] .= 1
-    for i in 1:nacf
-      corrM[band(i)] .= corrM[band(-i)] .= acf[i]
-    end
-    corrM
-end
-
 function Base.sum(dv::AbstractDistributionVector{D}, 
-    acf::AbstractVector{<:Number}, 
-    isgapfilled::AbstractVector{Bool} = Falses(length(dv)); 
+    acf::AutoCorrelationFunction; 
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)), 
     storage::AbstractVector{Union{Missing,ST}} = 
         Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
     skipmissings::Val{SM} = Val(false),    
@@ -118,19 +78,21 @@ function Base.sum(dv::AbstractDistributionVector{D},
     #storage = Vector{Union{Missing,eltype(D)}}(undef, length(dv))
     if M == :vector
         return(sum_lognormals(
-            dv, acf, isgapfilled, storage = storage, skipmissings = skipmissings))
+            dv, acf, isgapfilled=isgapfilled, storage = storage, 
+            skipmissings = skipmissings))
     end
     if M == :bandedmatrix
-        corrM = Symmetric(cormatrix_for_acf(length(dv), acf))
+        corrM = Symmetric(cormatrix_for_acf(length(dv), coef(acf)))
         return(sum_lognormals(
-            dv, corrM, isgapfilled,skipmissings = skipmissings, storage = storage))
+            dv, corrM, isgapfilled=isgapfilled,skipmissings = skipmissings, 
+            storage = storage))
     end
     error("Unknown method $method")
 end
 
 function sum_lognormals(dv::AbstractDistributionVector{D}, 
-    acf::AbstractVector, 
-    isgapfilled::AbstractVector{Bool} = Falses(length(dv)); 
+    acf::AutoCorrelationFunction; 
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
     skipmissings::Val{SK} = Val(false)) where 
@@ -142,8 +104,9 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     # financial applications. 10.1063/1.4964963
     μ = params(dv, Val(1))
     σ = params(dv, Val(2))
-    corrlength = length(acf)
-    acfm = vcat(reverse(acf), 1, acf)
+    coef_acf = coef(acf)
+    corrlength = length(coef_acf)
+    acfm = vcat(reverse(coef_acf), 1, coef_acf)
     n = length(μ)
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing.(storage))
@@ -179,19 +142,20 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
 end
 
 function Base.sum(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric{DS,<:AbstractMatrix}, 
-    isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)); 
+    corr::Symmetric{DS,<:AbstractMatrix}; 
+    isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
     skipmissings::Val{SM} = Val(false)) where 
     {D<:LogNormal, DS<:eltype(D), SM}
     sum_lognormals(
-        dv, corr, isgapfilled, storage = storage, skipmissings = skipmissings)
+        dv, corr, isgapfilled=isgapfilled, storage = storage, 
+        skipmissings = skipmissings)
 end
 
 function sum_lognormals(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric{DS,<:AbstractMatrix}, 
-    isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)); 
+    corr::Symmetric{DS,<:AbstractMatrix};
+    isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
         Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
     skipmissings::Val{SM} = Val(false)) where 

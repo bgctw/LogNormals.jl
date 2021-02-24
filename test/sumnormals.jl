@@ -28,18 +28,19 @@ using Test, Distributions, LinearAlgebra, Missings
     @testset "with gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1);
       isgapfilled = [true, false, false]
-      dsum = @inferred sum(dv, isgapfilled)
+      dsum = @inferred sum(dv, isgapfilled =isgapfilled)
       #@code_warntype sum(dv, isgapfilled)
       @test mean(dsum) == mean(sum(dv)) # mean takes all into account
       @test std(dsum) > std(sum(dv))
       dsumn = sum(dv[.!isgapfilled])
-      @test std(dsum)/mean(dsum) == std(dsumn)/mean(dsumn)   # relative error like non-gapfilled
+      # relative error like non-gapfilled
+      @test std(dsum)/mean(dsum) == std(dsumn)/mean(dsumn)   
     end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
       isgapfilled = [true, true, false, false]
-      dsum5 = @inferred sum(dv[1:3], isgapfilled[1:3])
-      dsum = @inferred sum(dv, isgapfilled; skipmissings = Val(true))
+      dsum5 = @inferred sum(dv[1:3], isgapfilled=isgapfilled[1:3])
+      dsum = @inferred sum(dv, isgapfilled=isgapfilled, skipmissings=Val(true))
       #@code_warntype sum(dv, isgapfilled; skipmissings = Val(true))
       @test dsum == dsum5
     end;
@@ -48,7 +49,7 @@ end;
 @testset "few correlated vars" begin
   mu = [110,100,80,120,160.0]
   sigma = [20.0,50,10,30,10]
-  acf1 = [0.4,0.1]
+  acf1 = @inferred AutoCorrelationFunction([0.4,0.1])
   n = length(mu)
   corrM = @inferred cormatrix_for_acf(n, acf1)
   dv = SimpleDistributionVector(Normal{eltype(mu)}, mu, sigma);
@@ -75,7 +76,7 @@ end;
   @testset "with gapfilling flag" begin
     isgapfilled = fill(false, length(dv)); isgapfilled[4:end] .= true
     dsum4 = sum(dv, Symmetric(corrM))
-    dsum = @inferred sum(dv, Symmetric(corrM), isgapfilled)
+    dsum = @inferred sum(dv, Symmetric(corrM), isgapfilled=isgapfilled)
     #@code_warntype sum(dv, isgapfilled)
     @test mean(dsum) == mean(dsum4)
     @test std(dsum) > std(dsum4)
@@ -87,7 +88,8 @@ end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
     dsum4 = sum(dvm, Symmetric(corrM); skipmissings = Val(true))
-    dsum4b = @inferred sum(dvm, Symmetric(corrM), isgapfilled; skipmissings = Val(true))
+    dsum4b = @inferred sum(
+      dvm, Symmetric(corrM), isgapfilled=isgapfilled, skipmissings = Val(true))
     #@code_warntype sum(dvm, isgapfilled)
     @test mean(dsum4b) == mean(dsum4)
     @test std(dsum4b) > std(dsum4)
@@ -97,7 +99,8 @@ end;
     @test std(dsum4b)/mean(dsum4b) == sqrt(sum(Sigma))/sum(mu[ifin])
     # 
     # acf variant
-    dsum4c = @inferred sum(dvm, acf1, isgapfilled; skipmissings = Val(true))
+    dsum4c = @inferred sum(
+      dvm, acf1, isgapfilled=isgapfilled; skipmissings = Val(true))
     @test dsum4c == dsum4b
   end;
 end;  

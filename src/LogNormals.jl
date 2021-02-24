@@ -12,11 +12,11 @@ export AbstractMoments, Moments, n_moments, moments,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
     AbstractDistributionVector, SimpleDistributionVector, ParamDistributionVector,
+    AutoCorrelationFunction,
     sum_lognormals, 
     sum_normals,
     cormatrix_for_acf,
     vectuptotupvec
-    #paramtypes, 
 
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
@@ -40,11 +40,12 @@ include("logitnormal.jl")
 # SimpleDistributionVector type
 include("distributionvector.jl")
 
+# sum of normal random variables
+include("sumnormals.jl")
+
 # sum of lognormal random variables
 include("sumlognormals.jl")
 
-# sum of normal random variables
-include("sumnormals.jl")
 
     
 end # module
