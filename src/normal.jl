@@ -17,9 +17,9 @@ function StatsBase.fit(::Type{Normal}, lower::QuantilePoint, upper::QuantilePoin
 end
 
 fit_mean_quantile(D::Type{Normal}, mean, qp::QuantilePoint) = 
-    fit(D, QuantilePoint(0.5, mean), qp)
+    fit(D, QuantilePoint(mean, 0.5), qp)
 
 fit_mode_quantile(D::Type{Normal}, mode, qp::QuantilePoint) = 
-    fit(D, QuantilePoint(0.5, mode), qp)
+    fit(D, QuantilePoint(mode, 0.5), qp)
 
 

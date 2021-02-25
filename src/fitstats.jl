@@ -68,7 +68,8 @@ moments(Normal())  # mean and variance
 """
 function moments(d::Distribution, ::Val{N} = Val(2)) where N 
     typeof(N) <: Integer || error("N must be a positive Integer")
-    N > 4 && error("Getting moments above 4 not yet implemented for distribution $(typeof(d)).")
+    N > 4 && error("Getting moments above 4 not yet implemented for " * 
+        "distribution $(typeof(d)).")
     N == 4 && return(Moments(mean(d), var(d), skewness(d), kurtosis(d)))
     N == 3 && return(Moments(mean(d), var(d), skewness(d)))
     N == 2 && return(Moments(mean(d), var(d)))
@@ -114,35 +115,37 @@ StatsBase.fit(::Type{D}, m::AbstractMoments) where {D<:Distribution} =
 
 
 
-struct QuantilePoint
-    p
-    q
-    QuantilePoint(p,q) = 0 < p < 1 ? new(p,q) : 
+struct QuantilePoint{TQ,TP}
+    q::TQ
+    p::TP
+    QuantilePoint{TQ,TP}(q,p) where {TQ,TP} = 0 < p < 1 ? new(q,p) : 
         error("p must be in (0,1)")
 end
-QuantilePoint(qp::QuantilePoint; p = qp.p, q = qp.q) = QuantilePoint(p,q)
-Base.show(io::IO, qp::QuantilePoint) = print(io, "(p=$(qp.p),q=$(qp.q))")
+QuantilePoint(q,p) = QuantilePoint{typeof(q),typeof(p)}(q,p)
+
+QuantilePoint(qp::QuantilePoint; q = qp.q, p = qp.p) = QuantilePoint(q,p)
+Base.show(io::IO, qp::QuantilePoint) = print(io, "QuantilePoint($(qp.q),$(qp.p))")
 function Base.isless(x::QuantilePoint,y::QuantilePoint)
     is_equal_q = (x.q == y.q)
-    ((x.p == y.p) && !is_equal_q) && error("incompatible QuantilePoints: $x,$y")
+    ((x.p == y.p) && !is_equal_q) && error("incompatible: $x,$y")
     isless = (x.q < y.q)
     # for different p, q needs to be different
-    (isless && (x.p > y.p)) && error("incompatible QuantilePoints: $(x),$(y)")
-    (!isless && !is_equal_q && (x.p < y.p))  && error("incompatible QuantilePoints: $x,$y")
+    (isless && (x.p > y.p)) && error("incompatible: $(x),$(y)")
+    (!isless && !is_equal_q && (x.p < y.p))  && error("incompatible: $x,$y")
     return(isless)
 end
 
-macro qp(p,q) :(QuantilePoint($(esc(p)), $(esc(q)))) end
-macro qp_ll(q0_025) :(QuantilePoint(0.025, $(esc(q0_025)))) end
-macro qp_l(q0_05) :(QuantilePoint(0.05, $(esc(q0_05)))) end
-macro qp_m(median) :(QuantilePoint(0.5, $(esc(median)))) end
-macro qp_u(q0_95) :(QuantilePoint(0.95, $(esc(q0_95)))) end
-macro qp_uu(q0_975) :(QuantilePoint(0.975, $(esc(q0_975)))) end
+macro qp(q,p) :(QuantilePoint($(esc(q)), $(esc(p)))) end
+macro qp_ll(q0_025) :(QuantilePoint($(esc(q0_025)),0.025)) end
+macro qp_l(q0_05) :(QuantilePoint($(esc(q0_05)),0.05)) end
+macro qp_m(median) :(QuantilePoint($(esc(median)),0.5)) end
+macro qp_u(q0_95) :(QuantilePoint($(esc(q0_95)),0.95)) end
+macro qp_uu(q0_975) :(QuantilePoint($(esc(q0_975)),0.975)) end
 
 macro qs_cf90(q0_05,q0_95) 
-    :(Set([QuantilePoint(0.05,$(esc(q0_05))),QuantilePoint(0.95,$(esc(q0_95)))])) end
+    :(Set([QuantilePoint($(esc(q0_05)),0.05),QuantilePoint($(esc(q0_95)),0.95)])) end
 macro qs_cf95(q0_025,q0_975) 
-    :(Set([QuantilePoint(0.025,$(esc(q0_025))),QuantilePoint(0.975,$(esc(q0_975)))])) end    
+    :(Set([QuantilePoint($(esc(q0_025)),0.025),QuantilePoint($(esc(q0_975)),0.975)])) end
 
 
 """
@@ -157,12 +160,12 @@ Fit a statistical distribution to a set of quantiles
 
 # Notes
 Several macros help to construct QuantilePoints
-- `@qp(p,q)`    quantile at specified p: `QuantilePoint(p, q)`
-- `@qp_ll(q0_025)`  quantile at very low p: `QuantilePoint(0.025, q0_025)` 
-- `@qp_l(q0_05)`    quantile at low p: `QuantilePoint(0.05, q0_05)` 
-- `@qp_m(median)`   quantile at median: `QuantilePoint(0.5, median)` 
-- `@qp_u(q0_95)`    quantile at high p: `QuantilePoint(0.95, q0_95)`  
-- `@qp_uu(q0_975)`  quantile at very high p: `QuantilePoint(0.975, q0_975)` 
+- `@qp(q,p)`    quantile at specified p: `QuantilePoint(q,p)`
+- `@qp_ll(q0_025)`  quantile at very low p: `QuantilePoint(q0_025,0.025)` 
+- `@qp_l(q0_05)`    quantile at low p: `QuantilePoint(q0_05,0.05)` 
+- `@qp_m(median)`   quantile at median: `QuantilePoint(median,0.5)` 
+- `@qp_u(q0_95)`    quantile at high p: `QuantilePoint(q0_95,0.95)`  
+- `@qp_uu(q0_975)`  quantile at very high p: `QuantilePoint(q0_975,0.975)` 
 
 # Examples
 ```jldoctest; output = false, setup = :(using Statistics,Distributions,LogNormals)
@@ -188,7 +191,7 @@ Fit a statistical distribution to a quantile and given statistics
 # Arguments
 - `D`: The type of distribution to fit
 - `val`: The value of statistics
-- `qp`: QuantilePoint(p,q)
+- `qp`: QuantilePoint(q,p)
 - `stats` Which statistics to fit: defaults to `Val(:mean)`. 
    Alternatives are: `Val(:mode)`, `Val(:median)`
 
@@ -212,7 +215,4 @@ function StatsBase.fit(::Type{D}, val, qp::QuantilePoint, ::Val{stats} = Val(:me
     stats == :median && return(fit_median_quantile(D, val, qp))
     error("unknown stats: $stats")
 end;
-
-
-
 

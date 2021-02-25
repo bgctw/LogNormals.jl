@@ -203,4 +203,7 @@ using StaticArrays
 xs = SVector(missing , 2.0)
 @inferred f(xs)
 
-
+tvec = allowmissing([(rand(),rand()) for i=1:6]);
+tvec[1] = missing
+c = mappedarray(x-> ismissing(x) ? missing : x,tvec);
+c[1:2]

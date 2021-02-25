@@ -2,7 +2,7 @@
 
 @testset "Normal fit to stats" begin
     d = Normal(3,2)
-    qp = @qp(0.95,quantile(d,0.95))
+    qp = @qp(quantile(d,0.95),0.95)
     @testset "fit moments" begin
         dfit = fit(Normal, moments(d))
         @test dfit ≈ d
