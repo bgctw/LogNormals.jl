@@ -7,9 +7,10 @@ function sum(dv::AbstractDistributionVector{<:Normal};
     if B == true
         # need to allocate anyway with subsetting
         nonmissing = findall(.!ismissing.(dv))
-        !isempty(nonmissing) && return(sum(
-            @inbounds(dv[nonmissing]), 
-            isgapfilled = @inbounds(isgapfilled[nonmissing])))
+        if !isempty(nonmissing) 
+            return(sum(@inbounds(dv[nonmissing]), 
+                isgapfilled = @inbounds(isgapfilled[nonmissing])))
+        end
     end
     # uncorrelated, only sum diagonal
     Ssum = s = Ssumnonfilled = zero(eltype(nonmissingtype(eltype(dv))))

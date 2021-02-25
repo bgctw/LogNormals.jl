@@ -1,6 +1,12 @@
 using LogNormals
 using Test, Distributions, LinearAlgebra, Missings
 
+
+@testset "sumDistributionVector: not defined for D" begin
+  dv = SimpleDistributionVector(MvNormal(3, 0.2))
+  @test_throws ErrorException sum(dv)
+end;
+
 @testset "sumnormals" begin
 
 @testset "two vars uncorrelated" begin
@@ -17,8 +23,8 @@ using Test, Distributions, LinearAlgebra, Missings
     end;
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
-        @test coalesce.(collect(dv), LogNormal()) == [d1, LogNormal()]
-        @test_throws Exception dsum2 = sum(dv) # without skipmissings
+        @test isequal(collect(dv), [d1, missing])
+        @test_throws Exception dsum2 = sum(dv) # error: forgot skipmissings
         dsum2 = @inferred sum(skipmissing(dv))
         @test dsum2 == d1
         dsum3 = @inferred sum(dv; skipmissings = Val(true))

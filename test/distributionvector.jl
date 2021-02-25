@@ -47,6 +47,8 @@ end;
         @test isa(d, Binomial{Float64})
         @test params(d) == (n[1], p[1])
         darr = [d for d in dv]
+        dvec = @inferred collect(dv)
+        @test length(dvec) == 3
     end;    
     @testset "iterator missing" begin
         @test @inferred length(dvm) == 3
@@ -56,6 +58,8 @@ end;
         @test params(d) == (n[2], p[2])
         darr = [d for d in dvm]
         ismissing(darr[1])
+        dvec = @inferred collect(dvm)
+        @test length(dvec) == 3
     end; 
     @testset "getindex" begin
         @test isequal(collect(@inferred dv[1:3]), collect(dv))

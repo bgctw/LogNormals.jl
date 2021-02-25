@@ -6,9 +6,10 @@ function sum(dv::AbstractDistributionVector{<:LogNormal};
         "but was $(length(isgapfilled)).")
     if B == true
         nonmissing = findall(.!ismissing.(dv))
-        !isempty(nonmissing) && return(sum(
-            @inbounds(dv[nonmissing]), 
-            isgapfilled=@inbounds(isgapfilled[nonmissing])))
+        if !isempty(nonmissing) 
+            return(sum(@inbounds(dv[nonmissing]), 
+                isgapfilled = @inbounds(isgapfilled[nonmissing])))
+        end
     end
     # uncorrelated, only sum diagonal
     Ssum = s = Ssumnonfilled = zero(eltype(nonmissingtype(eltype(dv))))#zero(T)
