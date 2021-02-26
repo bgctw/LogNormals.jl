@@ -154,3 +154,21 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     LogNormal(μ_sum, √σ2eff)  
 end
 
+mean(dv::AbstractDistributionVector{<:LogNormal}; kwargs...) =
+    mean_lognormals(dv; kwargs...)
+mean(dv::AbstractDistributionVector{<:LogNormal}, corr::Symmetric; kwargs...) =
+    mean_lognormals(dv, corr; kwargs...)
+mean(dv::AbstractDistributionVector{<:LogNormal}, acf::AutoCorrelationFunction; 
+    kwargs...) =
+    mean_lognormals(dv, acf; kwargs...)
+
+function mean_lognormals(dv::AbstractDistributionVector{<:LogNormal}, x...; 
+    kwargs...) 
+    ds = sum(dv, x...; kwargs...)
+    n = count(x -> !ismissing(x), dv)
+    # multiplicative uncertainty stays the same
+    LogNormal(ds.μ/n, ds.σ)
+end
+
+
+

@@ -51,6 +51,12 @@ end
       #@code_warntype sum(dv, isgapfilled=isgapfilled)
       @test mean(dsum) == mean(dsum4)
       @test std(dsum) > std(dsum4)
+      # mean function
+      dmean = @inferred mean(dv; isgapfilled=isgapfilled)
+      @test dmean.μ ≈ dsum.μ / 3
+      # relative error like non-gapfilled
+      dmeann = mean(dv[.!isgapfilled])
+      @test std(dmean)/mean(dmean) ≈ std(dmeann)/mean(dmeann)   
     end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
@@ -81,6 +87,12 @@ end;
     # acf variant
     dsum3 = @inferred sum(dv, acf1)
     @test all(params(dsum3) .≈ params(dsum))
+    # mean function
+    dmean = @inferred mean(dv, Symmetric(corrM))
+    @test dmean.μ ≈ dsum.μ / length(dv)
+    @test dmean.σ ≈ dsum.σ
+    dmean_acf = @inferred mean(dv, acf1)
+    @test dmean_acf == dmean
   end;
   @testset "matrix with missing" begin
     @test_throws ErrorException dsumm = sum(dvm, Symmetric(corrM))
