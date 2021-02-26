@@ -89,9 +89,25 @@ function sum_normals(dv::AbstractDistributionVector{D},
     end
     nterm > 0 || error("Expected at least one nonmissing term, but mu = $μ")
     relerr = √s/Ssumnonfilled
-    #@show Ssum, Ssumnonfilled, s, relerr
     Normal(Ssum, Ssum * relerr)
 end
 
+
+mean(dv::AbstractDistributionVector{<:Normal}; kwargs...) =
+    mean_normals(dv; kwargs...)
+mean(dv::AbstractDistributionVector{<:Normal}, corr::Symmetric; kwargs...) =
+    mean_normals(dv, corr; kwargs...)
+mean(dv::AbstractDistributionVector{<:Normal}, acf::AutoCorrelationFunction; 
+    kwargs...) =
+    mean_normals(dv, acf; kwargs...)
+
+function mean_normals(dv::AbstractDistributionVector{<:Normal}, x...; 
+    isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)), kwargs...) 
+    ds = sum(dv, isgapfilled=isgapfilled, x...; kwargs...)
+    n = count(x -> !ismissing(x), dv)
+    nobs = count((t->!ismissing(t[1]) && !t[2]), zip(dv, isgapfilled))
+    # relative error scales by 1/√nobs
+    Normal(ds.μ/n, ds.σ/(n*√nobs))
+end
 
 

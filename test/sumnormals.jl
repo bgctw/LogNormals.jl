@@ -15,11 +15,14 @@ end;
     d2 = Normal(3, 0.25)
     dv = SimpleDistributionVector(d1, d2);
     dsum = @inferred sum(dv)
+    dmean = @inferred mean(dv)
     @testset "no missings" begin
         @test params(dsum)[1] ≈ 5
         # checked with random numbers 
         #boot_dvsum(dv)
         @test params(dsum)[2] ≈ sqrt(abs2(0.15) + abs2(0.25))
+        @test dmean.μ ≈ 2.5
+        @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √length(dv)
     end;
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
@@ -30,17 +33,26 @@ end;
         dsum3 = @inferred sum(dv; skipmissings = Val(true))
         @test dsum3 == d1
         #@btime sum(skipmissing($dv)) # does not allocate
+        dmean2 = @inferred mean(dv; skipmissings = Val(true))
+        @test dmean2 == d1
     end;
     @testset "with gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1);
+      #dv = SimpleDistributionVector(d1, d1, d1);
       isgapfilled = [true, false, false]
-      dsum = @inferred sum(dv, isgapfilled =isgapfilled)
+      dsum = @inferred sum(dv, isgapfilled=isgapfilled)
       #@code_warntype sum(dv, isgapfilled)
       @test mean(dsum) == mean(sum(dv)) # mean takes all into account
       @test std(dsum) > std(sum(dv))
-      dsumn = sum(dv[.!isgapfilled])
       # relative error like non-gapfilled
+      dsumn = sum(dv[.!isgapfilled])
       @test std(dsum)/mean(dsum) == std(dsumn)/mean(dsumn)   
+      # mean function
+      dmean = @inferred mean(dv; isgapfilled=isgapfilled)
+      @test dmean.μ ≈ dsum.μ / 3
+      # relative error like non-gapfilled
+      dmeann = mean(dv[.!isgapfilled])
+      @test std(dmean)/mean(dmean) ≈ std(dmeann)/mean(dmeann)   
     end;
     @testset "with missings and gapfilling flag" begin
       dv = SimpleDistributionVector(d1, d2, d1, missing);
@@ -49,6 +61,10 @@ end;
       dsum = @inferred sum(dv, isgapfilled=isgapfilled, skipmissings=Val(true))
       #@code_warntype sum(dv, isgapfilled; skipmissings = Val(true))
       @test dsum == dsum5
+      # mean function
+      dmean = @inferred mean(dv; isgapfilled=isgapfilled, skipmissings=Val(true))
+      dmeann = @inferred mean(dv[1:3], isgapfilled=isgapfilled[1:3])
+      @test dmean == dmeann
     end;
 end;
 
@@ -72,12 +88,20 @@ end;
     # explicit sum over covariance Sigma
     Sigma = Diagonal(sigma) * corrM * Diagonal(sigma)
     @test params(dsum)[2] == sqrt(sum(Sigma))
+    # mean function
+    dmean = @inferred mean(dv, Symmetric(corrM))
+    @test dmean.μ ≈ dsum.μ / length(dv)
+    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √length(dv)
   end;
   @testset "matrix with missing" begin
     @test_throws Exception dsumm = sum(dvm, Symmetric(corrM))
     #S = similar(mum);
     dsumm = @inferred sum(dvm, Symmetric(corrM); skipmissings = Val(true) )
     params(dsumm) == params(sum(dvm[2:end], Symmetric(corrM[2:end,2:end])))
+    # mean function
+    dmean = @inferred mean(dvm, Symmetric(corrM); skipmissings = Val(true) )
+    @test dmean.μ ≈ dsumm.μ / 4
+    @test dmean.σ/dmean.μ ≈ dsumm.σ/dsumm.μ / √4
   end;
   @testset "with gapfilling flag" begin
     isgapfilled = fill(false, length(dv)); isgapfilled[4:end] .= true
@@ -90,6 +114,11 @@ end;
     ifin = .!isgapfilled
     Sigma = Diagonal(sigma[ifin]) * corrM[ifin,ifin] * Diagonal(sigma[ifin])
     @test std(dsum)/mean(dsum) == sqrt(sum(Sigma))/sum(mu[ifin])
+    # mean function
+    dmean = @inferred mean(dv, Symmetric(corrM); 
+      isgapfilled=isgapfilled, skipmissings = Val(true) )
+    @test dmean.μ ≈ dsum.μ / 5
+    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √3
   end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
@@ -108,6 +137,14 @@ end;
     dsum4c = @inferred sum(
       dvm, acf1, isgapfilled=isgapfilled; skipmissings = Val(true))
     @test dsum4c == dsum4b
+    # mean function
+    dmean = @inferred mean(dvm, Symmetric(corrM); 
+      isgapfilled=isgapfilled, skipmissings = Val(true) )
+    @test dmean.μ ≈ dsum4b.μ / 4
+    @test dmean.σ/dmean.μ ≈ dsum4b.σ/dsum4b.μ / √2
+    dmean_acf = @inferred mean(dvm, acf1; 
+      isgapfilled=isgapfilled, skipmissings = Val(true) )
+    @test dmean_acf == dmean
   end;
 end;  
 

@@ -20,6 +20,7 @@ export AbstractMoments, Moments, n_moments, moments,
 
 import Random: rand
 import Base: sum
+import Statistics: mean
 import StatsBase: coef
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
