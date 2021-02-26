@@ -70,7 +70,9 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     σ = params(dv, Val(2))
     coef_acf = coef(acf)
     corrlength = length(coef_acf)
-    acfm = vcat(reverse(coef_acf), 1, coef_acf)
+    #acfm = vcat(reverse(coef_acf), 1, coef_acf)
+    #use OffsetArrays so that index corresponds to lag: acfm[0] == 1
+    acfm = OffsetArray(vcat(reverse(coef_acf), 1, coef_acf), -length(coef_acf)-1)
     n = length(μ)
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing.(storage))
@@ -92,10 +94,10 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
         jstart = max(1, i - corrlength)
         jend = min(n, i + corrlength)
         for j in jstart:jend
-            acf_ind = (j-i + corrlength +1)
+            #acf_ind = (j-i + corrlength +1)
             # sij will be zero if sigma or storage is missing (replaced by zero)
             # Sj moved to start to help multiplication by early zero
-            sij = Spure[j] * acfm[acf_ind] * σpure[i] * σpure[j] * Spure[i] 
+            sij = Spure[j] * acfm[j-i] * σpure[i] * σpure[j] * Spure[i] 
             s += sij
         end
     end

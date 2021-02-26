@@ -23,7 +23,7 @@ import Base: sum
 import StatsBase: coef
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
-using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays
+using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays, OffsetArrays
 using Random
 
 # general fitting to statistics
