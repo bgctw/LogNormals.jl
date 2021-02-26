@@ -2,8 +2,12 @@
     sum(dv::AbstractDistributionVector; <keyword arguments>)
     sum(dv::AbstractDistributionVector, corr; <keyword arguments>)
     sum(dv::AbstractDistributionVector, acf; <keyword arguments>)
+    
+    mean(dv::AbstractDistributionVector; <keyword arguments>)
+    mean(dv::AbstractDistributionVector, corr; <keyword arguments>)
+    mean(dv::AbstractDistributionVector, acf; <keyword arguments>)
 
-Compute the distribution of the sum of correlated random variables.
+Compute the distribution of the sum or mean of correlated random variables.
 
 # Arguments
 - `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
@@ -28,17 +32,12 @@ support an additional keyword parameter
 function sum(dv::AbstractDistributionVector)
     error("sum not defined yet for " * 
     "Distributionvector{$(nonmissingtype(eltype(dv)))}")
-end#,
-# function sum(dv::AbstractDistributionVector, acf::AutoCorrelationFunction)
-#     error("sum with autocorrelation function not defined yet for " * 
-#     "Distributionvector{$(nonmissingtype(eltype(dv)))}")
-# end,
-# function sum(dv::AbstractDistributionVector{D}, 
-#     corr::Symmetric) where
-#     {D<:Distribution, DS<:eltype(D)}
-#     error("sum not defined yet for " * 
-#     "Distributionvector{$(nonmissingtype(eltype(dv)))}")
-# end
+end, 
+function mean(dv::AbstractDistributionVector)
+    error("mean not defined yet for " * 
+    "Distributionvector{$(nonmissingtype(eltype(dv)))}")
+end
+
 
 
 """

@@ -5,6 +5,7 @@ using Test, Distributions, LinearAlgebra, Missings
 @testset "sumDistributionVector: not defined for D" begin
   dv = SimpleDistributionVector(MvNormal(3, 0.2))
   @test_throws ErrorException sum(dv)
+  @test_throws ErrorException mean(dv)
 end;
 
 @testset "sumnormals" begin
