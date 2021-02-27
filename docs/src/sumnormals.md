@@ -17,9 +17,13 @@ with number of records.
 \begin{aligned}
 m &= {S \over n} = {\sum_i x_i \over n} \text{ with } x_i \sim N(\mu_i, \sigma_i) 
 \\
-Var(m) = \sigma^2_m &= Var\left(\sum_i x_i \over n\right) = {1 \over n^2} Var\left( \sum_i x_i \right) = {1 \over n^2} \sum_i \sigma^2_i  = {1 \over n^2} n \overline{ \sigma^2_i}  = {\overline{ \sigma^2_i} \over n} 
+Var(m) = \sigma^2_m &= Var\left(\sum_i x_i \over n\right) = 
+  {1 \over n^2} Var\left( \sum_i x_i \right) = {1 \over n^2} \sum_i \sigma^2_i = 
+  {1 \over n^2} n \overline{ \sigma^2_i}  = {\overline{ \sigma^2_i} \over n} 
 \\
-\operatorname{se}(x) = \operatorname{std}(m) = \sigma_m &= {\sqrt{\overline{ \sigma^2_i}} \over \sqrt{n}} = \operatorname{rmse}(\sigma_i) / \sqrt{n}
+\operatorname{se}(x) = \operatorname{std}(m) = \sigma_m &= 
+  {\sqrt{\overline{ \sigma^2_i}} \over \sqrt{n}} = 
+  \operatorname{rmse}(\sigma_i) / \sqrt{n}
 \end{aligned} 
 ```
 
