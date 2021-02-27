@@ -8,9 +8,9 @@
 
 ```@contents
 Pages = ["lognormalprops.md", "fitstats.md", "distributionvector.md", 
-"sumdist.md", "sumlognormals.md"]
+"sumdist.md", "sumnormals.md","sumlognormals.md"]
 Depth = 2
 ```
 
-see the [github repository](https://github.com/bgctw/LogNormals.jl).
+See all the [github repository](https://github.com/bgctw/LogNormals.jl).
 
