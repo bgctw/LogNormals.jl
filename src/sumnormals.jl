@@ -101,13 +101,10 @@ mean(dv::AbstractDistributionVector{<:Normal}, acf::AutoCorrelationFunction;
     kwargs...) =
     mean_normals(dv, acf; kwargs...)
 
-function mean_normals(dv::AbstractDistributionVector{<:Normal}, x...; 
-    isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)), kwargs...) 
-    ds = sum(dv, isgapfilled=isgapfilled, x...; kwargs...)
+function mean_normals(dv::AbstractDistributionVector{<:Normal}, x...; kwargs...) 
+    ds = sum(dv, x...; kwargs...)
     n = count(x -> !ismissing(x), dv)
-    nobs = count((t->!ismissing(t[1]) && !t[2]), zip(dv, isgapfilled))
-    # relative error scales by 1/√nobs
-    Normal(ds.μ/n, ds.σ/(n*√nobs))
+    Normal(ds.μ/n, ds.σ/n)
 end
 
 

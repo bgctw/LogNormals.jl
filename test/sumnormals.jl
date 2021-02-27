@@ -21,9 +21,11 @@ end;
         @test params(dsum)[1] ≈ 5
         # checked with random numbers 
         #boot_dvsum(dv)
-        @test params(dsum)[2] ≈ sqrt(abs2(0.15) + abs2(0.25))
+        @test params(dsum)[2] ≈ √(abs2(0.15) + abs2(0.25))
         @test dmean.μ ≈ 2.5
-        @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √length(dv)
+        @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ 
+        # squared mean uncertainty decreases by √n
+        @test dmean.σ ≈ sqrt(mean([abs2(0.15),abs2(0.25)]))/√2
     end;
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
@@ -92,7 +94,7 @@ end;
     # mean function
     dmean = @inferred mean(dv, Symmetric(corrM))
     @test dmean.μ ≈ dsum.μ / length(dv)
-    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √length(dv)
+    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ 
   end;
   @testset "matrix with missing" begin
     @test_throws Exception dsumm = sum(dvm, Symmetric(corrM))
@@ -102,7 +104,7 @@ end;
     # mean function
     dmean = @inferred mean(dvm, Symmetric(corrM); skipmissings = Val(true) )
     @test dmean.μ ≈ dsumm.μ / 4
-    @test dmean.σ/dmean.μ ≈ dsumm.σ/dsumm.μ / √4
+    @test dmean.σ/dmean.μ ≈ dsumm.σ/dsumm.μ 
   end;
   @testset "with gapfilling flag" begin
     isgapfilled = fill(false, length(dv)); isgapfilled[4:end] .= true
@@ -119,7 +121,7 @@ end;
     dmean = @inferred mean(dv, Symmetric(corrM); 
       isgapfilled=isgapfilled, skipmissings = Val(true) )
     @test dmean.μ ≈ dsum.μ / 5
-    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ / √3
+    @test dmean.σ/dmean.μ ≈ dsum.σ/dsum.μ 
   end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
@@ -142,7 +144,7 @@ end;
     dmean = @inferred mean(dvm, Symmetric(corrM); 
       isgapfilled=isgapfilled, skipmissings = Val(true) )
     @test dmean.μ ≈ dsum4b.μ / 4
-    @test dmean.σ/dmean.μ ≈ dsum4b.σ/dsum4b.μ / √2
+    @test dmean.σ/dmean.μ ≈ dsum4b.σ/dsum4b.μ 
     dmean_acf = @inferred mean(dvm, acf1; 
       isgapfilled=isgapfilled, skipmissings = Val(true) )
     @test dmean_acf == dmean
