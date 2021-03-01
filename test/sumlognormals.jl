@@ -71,7 +71,7 @@ end;
 @testset "few correlated vars" begin
   mu = log.([110,100,80,120,160.0])
   sigma = log.([1.2,1.5,1.1,1.3,1.1])
-  acf1 = @inferred AutoCorrelationFunction([0.4,0.1])
+  acf1 = @inferred AutoCorrelationFunction([1, 0.4,0.1])
   n = length(mu)
   corrM = @inferred cormatrix_for_acf(n, acf1)
   dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);

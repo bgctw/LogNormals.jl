@@ -68,11 +68,11 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     # financial applications. 10.1063/1.4964963
     μ = params(dv, Val(1))
     σ = params(dv, Val(2))
-    coef_acf = coef(acf)
-    corrlength = length(coef_acf)
+    coef_acf1 = @view coef(acf)[2:end]
+    corrlength = length(coef_acf1)
     #acfm = vcat(reverse(coef_acf), 1, coef_acf)
     #use OffsetArrays so that index corresponds to lag: acfm[0] == 1
-    acfm = OffsetArray(vcat(reverse(coef_acf), 1, coef_acf), -length(coef_acf)-1)
+    acfm = OffsetArray(vcat(reverse(coef_acf1), 1, coef_acf1), -length(coef_acf1)-1)
     n = length(μ)
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing.(storage))

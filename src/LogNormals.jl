@@ -16,12 +16,13 @@ export AbstractMoments, Moments, n_moments, moments,
     sum_lognormals, 
     sum_normals,
     cormatrix_for_acf,
-    vectuptotupvec
+    vectuptotupvec,
+    autocor_effective, sem_cor
 
 import Random: rand
 import Base: sum
 import Statistics: mean
-import StatsBase: coef
+import StatsBase: coef, autocor
 
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays, OffsetArrays
@@ -51,6 +52,7 @@ include("sumnormals.jl")
 # sum of lognormal random variables
 include("sumlognormals.jl")
 
-
+# standard error of the mean of correlated normal variables
+include("semcor.jl")
     
 end # module

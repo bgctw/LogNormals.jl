@@ -13,9 +13,9 @@ to a bootstrap sample of sums over three correlated random variables.
 using Distributions,LogNormals
 mu = log.([110,100,80])
 sigma = log.([1.2,1.5,1.1])
-acf1 = AutoCorrelationFunction([0.4,0.1])
+acf0 = AutoCorrelationFunction([1,0.4,0.1])
 dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
-dsum = sum(dv, acf1)
+dsum = sum(dv, acf0)
 ```
 
 ```@setup boot
@@ -27,7 +27,7 @@ function boot_dvsums_acf(dv, acf, nboot = 10_000)
     x = rand(dn, nboot) .|> exp
     sums = vec(sum(x, dims = 1))
 end
-sums = boot_dvsums_acf(dv, acf1); 
+sums = boot_dvsums_acf(dv, acf0); 
 @test isapprox(dsum, fit(LogNormal, sums), rtol = 0.2) 
 p = plot(dsum, lab="computed", xlabel="sum of 3 correlated lognormally distributed random variables", ylabel="density");
 density!(p, sums, lab="random sample");
