@@ -66,6 +66,14 @@ end;
         @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
         @test isequal(collect(@inferred dvm[[1,2,3]]), collect(dvm))
     end;
+    @testset "copy and setindex" begin
+        dvt = @inferred copy(dv)
+        @test dvt == dv # same
+        @test !(dvt === dv) # but not identical (different object)
+        dvt[1:2] .= missing
+        @test isequal(dvt[1:2], [missing, missing]) 
+        @test !ismissing(dv[1]) # original not overidden
+    end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)
         d2 = Binomial(2, 0.15)
@@ -191,6 +199,16 @@ end; # testset "SimpleDistributionVector"
         @test isequal(collect(@inferred dv[1:3]), collect(dv))
         @test isequal(collect(@inferred dvm[1:3]), collect(dvm))
         @test isequal(collect(@inferred dvm[[1,2,3]]), collect(dvm))
+    end;
+    @testset "copy and setindex" begin
+        dvt = @inferred copy(dv)
+        @test dvt == dv # same
+        @test !(dvt === dv) # but not identical (different object)
+        dvt[2] = Binomial(4, 0.4)
+        @test dvt[2] == Binomial(4, 0.4)
+        dvt[1:2] .= missing
+        @test isequal(dvt[1:2], [missing, missing]) 
+        @test !ismissing(dv[1]) # original not overidden
     end;
     @testset "constructor with several Distributions" begin
         d1 = Binomial(1, 0.25)

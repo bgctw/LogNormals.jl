@@ -35,10 +35,11 @@ end
     end;
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
-        @test coalesce.(collect(dv), LogNormal()) == [d1, LogNormal()]
+        @test isequal(collect(dv),[d1, missing])
         @test_throws Exception dsum2 = sum(dv) # without skipmissings
         dsum2 = @inferred sum(skipmissing(dv))
         @test dsum2 == d1
+        #a,b = sum(dv; skipmissings = Val(true))
         dsum3 = @inferred sum(dv; skipmissings = Val(true))
         @test dsum3 == d1
         #@btime sum(skipmissing($dv)) # does not allocate

@@ -6,6 +6,7 @@ function sum(dv::AbstractDistributionVector{<:LogNormal};
         "but was $(length(isgapfilled)).")
     if B == true
         nonmissing = findall(.!ismissing.(dv))
+        #return( dv[nonmissing], isgapfilled[nonmissing])
         if !isempty(nonmissing) 
             return(sum(@inbounds(dv[nonmissing]), 
                 isgapfilled = @inbounds(isgapfilled[nonmissing])))

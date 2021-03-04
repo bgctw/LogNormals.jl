@@ -107,20 +107,26 @@ size(sample) == (3,2,4)
 true
 ```
 """
-abstract type AbstractDistributionVector{D <: Distribution} end
+abstract type AbstractDistributionVector{D <: Distribution} <: AbstractVector{Union{Missing,D}} end
 
-Base.eltype(::Type{<:AbstractDistributionVector{D}}) where D = Union{Missing,D}
+Base.size(dv::AbstractDistributionVector) = (length(dv),)
 
-function Base.iterate(dv::AbstractDistributionVector, state=1) 
-    state > length(dv) ? nothing : (dv[state], state+1)
-end
+# the following already definded by AbstractVector{D}
+#Base.eltype(::Type{<:AbstractDistributionVector{D}}) where D = Union{Missing,D}
+#Base.ndims(::Type{<:AbstractDistributionVector}) = 1
 
-function Base.iterate(rds::Iterators.Reverse{AbstractDistributionVector}, 
-    state=length(rds.itr))  
-    state < 1 ? nothing : (rds.itr[state], state-1)
-end
-Base.firstindex(dv::AbstractDistributionVector) = 1
-Base.lastindex(dv::AbstractDistributionVector) = length(dv)
+# function Base.iterate(dv::AbstractDistributionVector, state=1) 
+#     state > length(dv) ? nothing : (dv[state], state+1)
+# end
+
+# function Base.iterate(rds::Iterators.Reverse{AbstractDistributionVector}, 
+#     state=length(rds.itr))  
+#     state < 1 ? nothing : (rds.itr[state], state-1)
+# end
+# Base.firstindex(dv::AbstractDistributionVector) = 1
+# Base.lastindex(dv::AbstractDistributionVector) = length(dv)
+
+
 # function Base.getindex(dv::AbstractDistributionVector, i::Number) 
 #     @info "getindex(dv::AbstractDistributionVector, i::Number)"
 #     dv[convert(Int, i)]
@@ -150,6 +156,13 @@ function rand(dv::AbstractDistributionVector)
     vecarr = convert(Vector{Union{typeof(xm),typeof(x1)}}, fmiss.(dv))::Vector{Union{typeof(xm),typeof(x1)}}
     nonmissingtype(eltype(dv)) <: UnivariateDistribution ? 
         vecarr : VectorOfArray(vecarr)
+end
+function rand!(vecarr::AbstractArray{T}, dv::AbstractDistributionVector) where T
+    x1 = rand(first(skipmissing(dv))) 
+    xm = Fill(missing,size(x1))
+    #xm = fill(missing,size(x1))
+    fmiss(x)::Union{typeof(xm),typeof(x1)} = (ismissing(x) ? xm : rand(x)) 
+    vecarr .= fmiss.(dv)
 end
 
 ## SimpleDistributionVector   
@@ -236,16 +249,23 @@ end
 
 
 Base.length(dv::SimpleDistributionVector) = length(dv.dvec)
+Base.IndexStyle(::Type{<:SimpleDistributionVector{D,V}}) where {D,V} = IndexStyle(V)
+Base.similar(dv::SimpleDistributionVector{D,V}) where {D,V} = 
+    SimpleDistributionVector{D,V}(similar(dv.dvec))
 
 function Base.getindex(dv::SimpleDistributionVector,i::Int)
     dv.dvec[i] #::Union{Missing, D}
 end
 function Base.getindex(dv::SimpleDistributionVector, I...)
-    typeof(dv)(dv.dvec[I...])
-    #SimpleDistributionVector{D,V}(dv.dvec[I])
-    #Base.typename(DV).wrapper((dv[i] for i in I)...)
+    # # Catesian indexing?: provided a tuple -> get only a single value in printing
+    length(I) != 1 && return dv[I[1]]
+     dvecsub = dv.dvec[I...]
+    # #@show I, length(I), typeof(I), typeof(dvecsub)
+    # length(I) != 1 && return(dvecsub)
+    typeof(dv)(dvecsub)
 end
-
+Base.setindex!(dv::SimpleDistributionVector, d, i::Int) = dv.dvec[i] = d
+#Base.setindex!(dv::SimpleDistributionVector, d, I::Vararg{Int, N}) where N = dv.dvec[I...] = d
 
 # params(i) already defined as default in AbstractDistributionVector
 # function StatsBase.params(dv::SimpleDistributionVector, i::Integer) 
@@ -345,6 +365,10 @@ end
 
 
 Base.length(dv::ParamDistributionVector) = length(first(dv.params))
+Base.IndexStyle(::Type{<:ParamDistributionVector{D,V}}) where {D,V} = IndexStyle(first(V.parameters))
+
+Base.similar(dv::ParamDistributionVector{D,V}) where {D,V} = 
+    typeof(dv)(ntuple(i->similar(dv.params[i]), length(dv.params)))
 
 function Base.getindex(dv::ParamDistributionVector, i::Int)
     params_i = getindex.(dv.params, Ref(i))
@@ -357,6 +381,13 @@ function Base.getindex(dv::ParamDistributionVector, I)
     #ParamDistributionVector{D,V}(tupvec)
     #Base.typename(DV).wrapper((dv[i] for i in I)...)
 end
+function Base.setindex!(dv::ParamDistributionVector, d, i::Int)
+    p = ismissing(d) ? ntuple(_->missing,length(dv.params)) : params(d)
+    for ti in eachindex(dv.params)
+        dv.params[ti][i] = p[ti] 
+    end
+end
+
 
 
 function StatsBase.params(dv::ParamDistributionVector, ::Val{i}) where i
