@@ -68,8 +68,8 @@ function sum_normals(dv::AbstractDistributionVector{D},
     # var_sum (s) is the sum across all Sigma, i.e. σT * corr * σ
     # missings and gapfilled values do not count -> set to zero
     if SM == true
-        #@. storage = (x -> ismissing(x) ? zero(DS) : x)(σ)  
-        @. storage = coalesce(σ, zero(DS))  
+        # check on missings in dv, σ may have more finite values
+        @. storage = ifelse(ismissing(dv), zero(DS), σ) #coalesce(σ, zero(DS))  
         Spure = disallowmissing(storage) 
     else
         Spure = disallowmissing(σ)
