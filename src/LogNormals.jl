@@ -17,10 +17,10 @@ export AbstractMoments, Moments, n_moments, moments,
     sum_normals,
     cormatrix_for_acf,
     vectuptotupvec,
-    autocor_effective, sem_cor
+    autocor_effective, effective_n_cor, count_forlags, sem_cor
 
-import Random: rand
-import Base: sum
+import Random: rand, rand!
+import Base: sum, size
 import Statistics: mean
 import StatsBase: coef, autocor
 

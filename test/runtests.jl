@@ -12,6 +12,7 @@ include("distributionvector.jl")
 include("sumlognormals.jl")
 include("sumnormals.jl")
 
+include("semcor.jl")
 
 
 # TODO move to documentation

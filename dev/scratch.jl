@@ -6,10 +6,10 @@ Sum the numeric "2" to whatever it receives as input
 A more detailed explanation can go here, although I guess it is not needed in this case
 
 # Arguments
-* `x`: The amount to which we want to add 2
+- `x`: The amount to which we want to add 2
 
 # Notes
-* Notes can go here
+- Notes can go here
 
 # Examples
 ```julia
@@ -207,4 +207,21 @@ tvec = allowmissing([(rand(),rand()) for i=1:6]);
 tvec[1] = missing
 c = mappedarray(x-> ismissing(x) ? missing : x,tvec);
 c[1:2]
+
+##-------------- Testing Value-type flag
+function f1(;skip::Val{B}=Val(true)) where B
+    B ? 1 : 2
+end
+@code_llvm f1()
+@code_llvm f1(skip=Val(true))
+@code_llvm f1(skip=Val(false))
+
+function f2(;skip::Bool=true)
+    skip ? 1 : 2
+end
+@code_llvm f2() # standard fast
+# but others contain both branches
+@code_llvm f2(skip=true)
+@code_llvm f2(skip=false)
+
 
