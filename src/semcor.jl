@@ -98,7 +98,10 @@ function effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
     if exactmissing && (Missing <: eltype(x))
         # see derivation in sem_cor.md
         # number of missing combinations due to missing in x
-        (m0, mk...) = count_forlags(ismissing,x,0:length(k))
+        #only julia 1.6 (m0, mk...) = count_forlags(ismissing,x,0:length(k))
+        mka = count_forlags(ismissing,x,0:length(k))
+        m0 = mka[1]
+        mk = mka[2:end]
         nf = n - m0
         neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
     else
