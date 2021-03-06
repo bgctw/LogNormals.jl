@@ -208,6 +208,15 @@ tvec[1] = missing
 c = mappedarray(x-> ismissing(x) ? missing : x,tvec);
 c[1:2]
 
+# try with explicit return type: does not work either
+tvec = allowmissing([(rand(),rand()) for i=1:6]);
+tvec[1] = missing
+function f1(x)::Union{Missing,Float64}
+    ismissing(x) ? missing : first(x)
+end
+c = mappedarray(f1,tvec);
+c[1:2]
+
 ##-------------- Testing Value-type flag
 function f1(;skip::Val{B}=Val(true)) where B
     B ? 1 : 2

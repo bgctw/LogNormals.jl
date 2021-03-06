@@ -1,5 +1,12 @@
 # Standard error of the mean of correlated series
 
+The standard error of the mean of a series with positive autocorrelation
+is larger than 
+for an uncorrelated series, because the variance 
+[includes positive covariance
+terms](https://en.wikipedia.org/wiki/Variance#Sum_of_correlated_variables) 
+in addition to the variance of each record.
+
 ## Effective number of observations
 
 For uncorrelated series, the variance of the mean decreases by the number of records compared to the 
@@ -15,10 +22,8 @@ For correlated series, the effective number of observations is defined as to giv
 Var(\bar{x}) = {Var(x) \over n_{eff}}
 ```
 
-Since $n_{eff} < n$ for positive correlations, the 
-uncertainty of the mean, i.e. standard deviation of 
-the mean is larger than that for an uncorrelated series.
-
+There are only ``n_{eff}`` number of effective obserservations
+in the series.
 ```@docs
 effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
 ```
@@ -27,6 +32,12 @@ effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
 ```@docs
 sem_cor(x::Any, acfe::Any; exactmissing::Bool=true, neff=nothing)
 ```
+
+The default estiamtes the empirical autocorrelation from the given series. 
+If possible, use a more precise estimate from longer series. For example
+when computing the daily means of an hourly time series, estimate the 
+empirical autocorrelation from monthly or annual series and provide it to
+the daily applications of `sem_cor` using argument `acfe`.
 
 ## Variance of a correlated series
 ```@docs

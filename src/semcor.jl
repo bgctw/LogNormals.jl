@@ -2,14 +2,17 @@
     count_forlags(pred, x, lags)
     count_forlag(pred, x, k::Integer)
 
-Count the number of records in where each pair of records of lag `k`
-fulfil a predicate.
+Count the number of pairs for lag `k` which fulfil a predicate.
 
 # Arguments
 - `pred::Function(x_i,x_iplusk)::Bool`: The predicate to be applied to each pair 
 - `x`: The series whose lags are inspected.
 - `lags`: An iterator of Integer lag sizes
 - `k`: A single lag.
+
+Common case is to compute the number of missings for the autocorrelation:
+with predicate `missinginpair(x,y) = ismissing(x) || ismissing(y)`.
+
 """
 function count_forlag(pred,x,k::Integer)
     s = 0
@@ -24,12 +27,15 @@ function count_forlags(pred, x,lags::AbstractVector)
 end
 
 """
-    autocor(x::AbstractVector{Union{Missing,<:T}, lags; dmean, exactmissing=true}
+    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags; dmean::Bool=true, exactmissing=true}
 
 Estimate the autocorrelation function accounting for missing values.
 
 # Arguments
-- `exactmissing`: If set to `true` then devide the sum
+- `x`: series, which may contain missing values
+- `lags`: Integer vector of the lags for which correlation should be computed
+- `deman`: if `false`, assume `mean(x)==0`.
+- `exactmissing`: If set to `true` then divide the sum
     in the formula of the exepected value in the formula for the correlation
     at lag `k` by `n - nmissing` instead of `n`, 
     where `nimissing` is the number of records where there is a missing either
@@ -82,7 +88,7 @@ Estimate the effective autocorrelation function for series x.
 - According to Zieba 2011 using this effective version rather the full version
   when estimating the autocorrelationfunction from the data
   yields better result for the standard error of the mean ([`sem_cor`](@ref)).
-- Optional argument `acf` allows the caller to provide a different estimate,
+- Optional argument `acf` allows the caller to provide a different estimate
   of autocorrelation function e.g. using `exactmissing=false` in [`autocor`](@ref).
 """
 function autocor_effective(x, acf = autocor(x))
