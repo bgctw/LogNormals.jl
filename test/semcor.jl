@@ -11,7 +11,7 @@ using OffsetArrays, RecursiveArrayTools
     am = allowmissing(a); am[3:4] .= missing;
     az = copy(a); az[3:4] .= 0.0;
     @testset "count_forlags" begin
-        pred = ismissing
+        pred(x_i, x_iplusk) = ismissing(x_i) || ismissing(x_iplusk)
         x = [1,2,missing,missing,5]
         lags = 0:4
         nmiss = count_forlags(pred, x, lags)
@@ -66,6 +66,16 @@ using OffsetArrays, RecursiveArrayTools
         # no correlation estimate for lag 3
         neff3 = effective_n_cor(am[1:4], [acf0..., 0.05, 0.05])
         @test neff3 ≈ 1.43 atol=0.01 # regression test
+    end;
+    @testset "var_cor" begin
+        va = var_cor(a, acf0)
+        vam = var_cor(am, acf0)
+        vamf = var_cor(am, acf0; exactmissing=false)
+        # larger uncertainty with missings
+        @test vam > va
+        # not correcting neff for missings overestimates neff
+        # and hence underestimates uncertainty
+        @test vamf < vam
     end;
     @testset "semcor calling without acf" begin
         @test sem_cor(a; exactmissing=true) == sem_cor(a, autocor_effective(a))

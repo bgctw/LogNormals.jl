@@ -100,3 +100,4 @@ Var(m) &= {\sigma^2 \over n_{eff}} = {s^2 \over n_F^2}
 n_{eff} &= \frac{n_F}{1+{2 \over n_F} \sum_{k=1}^{n-1} (n-k-m_k) \rho_k}
 \end{aligned}
 $$
+

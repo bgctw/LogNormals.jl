@@ -8,7 +8,8 @@
 
 ```@contents
 Pages = ["lognormalprops.md", "fitstats.md", "distributionvector.md", 
-"sumdist.md", "sumnormals.md","sumlognormals.md"]
+"sumdist.md", "sumnormals.md","sumlognormals.md",
+"semcor.md"]
 Depth = 2
 ```
 

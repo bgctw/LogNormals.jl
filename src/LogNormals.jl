@@ -17,7 +17,7 @@ export AbstractMoments, Moments, n_moments, moments,
     sum_normals,
     cormatrix_for_acf,
     vectuptotupvec,
-    autocor_effective, effective_n_cor, count_forlags, sem_cor
+    autocor_effective, effective_n_cor, count_for_lag, count_forlags, sem_cor, var_cor
 
 import Random: rand, rand!
 import Base: sum, size

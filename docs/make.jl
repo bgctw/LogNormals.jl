@@ -14,6 +14,7 @@ makedocs(sitename="LogNormals.jl",
             "Sum of random variables" => "sumdist.md",
             "Sum Normals" => "sumnormals.md",
             "Sum LogNormals" => "sumlognormals.md",
+            "sem correlated" => "semcor.md",
          ],
          modules = [LogNormals],
          format = Documenter.HTML(prettyurls = false)
