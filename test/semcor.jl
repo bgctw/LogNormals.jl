@@ -14,25 +14,25 @@ using OffsetArrays, RecursiveArrayTools
         pred(x_i, x_iplusk) = ismissing(x_i) || ismissing(x_iplusk)
         x = [1,2,missing,missing,5]
         lags = 0:4
-        nmiss = count_forlags(pred, x, lags)
+        nmiss = @inferred count_forlags(pred, x, lags)
         @test nmiss == [2,3,3,1,0]
         # test for custom indices
         nmiss2 = count_forlags(pred, OffsetArray(x,-1), lags)
         @test nmiss2 == nmiss
         # views still work and larger lags return 0
-        nmiss3 = count_forlags(pred, view(x,1:2:5), lags)
+        nmiss3 = @inferred count_forlags(pred, view(x,1:2:5), lags)
         @test nmiss3 == [1,2,0,0,0]
     end;
     @testset "autocorr with missings" begin
         # for comparability center all around nomissing mean
         meana = mean(a)
         lags = 0:8
-        acfe = autocor(a.-meana, lags; demean=false);
-        acfem = autocor(am.-meana, lags; demean=false);
-        acfes = autocor((a.-meana)[4:end], lags; demean=false) # different nobs
+        acfe = @inferred autocor(a.-meana, lags; demean=false);
+        acfem = @inferred autocor(am.-meana, lags; demean=false);
+        acfes = @inferred autocor((a.-meana)[4:end], lags; demean=false) # different nobs
         azdemean = copy(a.-meana); azdemean[ismissing.(am)] .= 0.0
-        acfez = autocor(azdemean, lags; demean=false);
-        acfemf = autocor(am.-meana, lags; demean=false, exactmissing=false);
+        acfez = @inferred autocor(azdemean, lags; demean=false);
+        acfemf = @inferred autocor(am.-meana, lags; demean=false, exactmissing=false);
         hcat(acfe, acfem, acfez, acfemf)[1:4,:]
         # without exactmissing: missing same as vector with zeros
         @test acfemf == acfez
@@ -48,49 +48,45 @@ using OffsetArrays, RecursiveArrayTools
         @test acfem[5:end] ≈ acfez[5:end]
     end;
     @testset "autocor_effective" begin
-        effa = autocor_effective(a, acf0)
+        effa = @inferred autocor_effective(a, acf0)
         @test effa == acf0
-        effa = autocor_effective(a, [acf0..., -0.001])
+        effa = @inferred autocor_effective(a, [acf0..., -0.001])
         @test effa == acf0
     end;
     @testset "effective_n_cor" begin
-        neff = effective_n_cor(a, acf0)
+        neff = @inferred effective_n_cor(a, acf0)
         @test neff < length(a)
         @test neff ≈ 50.30 atol=0.01 # regression test
-        neffm = effective_n_cor(am, acf0)
+        neffm = @inferred effective_n_cor(am, acf0)
         @test neffm < neff
         @test neffm ≈ 49.61 atol=0.01 # regression test
         # n smaller than length(acf):
-        neff2 = effective_n_cor(a[1:2], [acf0..., 0.05, 0.05])
+        neff2 = @inferred effective_n_cor(a[1:2], [acf0..., 0.05, 0.05])
         @test neff2 ≈ 1.43 atol=0.01 # regression test
         # no correlation estimate for lag 3
-        neff3 = effective_n_cor(am[1:4], [acf0..., 0.05, 0.05])
+        neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05])
         @test neff3 ≈ 1.43 atol=0.01 # regression test
     end;
     @testset "var_cor" begin
-        va = var_cor(a, acf0)
-        vam = var_cor(am, acf0)
-        vamf = var_cor(am, acf0; exactmissing=false)
+        va = @inferred var_cor(a, acf0)
+        vam = @inferred var_cor(am, acf0)
+        #@code_warntype var_cor(am, acf0; exactmissing=true, neff=nothing)
+        @test isnan(var_cor(am[[3]],acf0))
+        @test isnan(var_cor(am[2:3],acf0)) # only one non-missing
+        vamf = @inferred var_cor(am, acf0; exactmissing=false)
         # larger uncertainty with missings
         @test vam > va
         # not correcting neff for missings overestimates neff
         # and hence underestimates uncertainty
         @test vamf < vam
     end;
-    @testset "semcor calling without acf" begin
-        @test sem_cor(a; exactmissing=true) == sem_cor(a, autocor_effective(a))
-        @test sem_cor(a; exactmissing=false) == sem_cor(a, autocor_effective(a))
-        @test sem_cor(am; exactmissing=true) == sem_cor(am, autocor_effective(am))
-        @test sem_cor(am; exactmissing=false) == sem_cor(am, 
-            autocor_effective(am, autocor(am; exactmissing=false)); 
-            exactmissing=false)
-    end;
     @testset "semcor with same effective acf" begin
-        se_a = sem_cor(a, acf0)
-        se_am = sem_cor(am, acf0)
-        se_az = sem_cor(az, acf0)
+        se_a = @inferred sem_cor(a, acf0)
+        se_am = @inferred sem_cor(am, acf0)
+        @test isnan(sem_cor(am[[3]],acf0))
+        se_az = @inferred sem_cor(az, acf0)
         ar = filter(x -> !ismissing(x), am)
-        se_ar = sem_cor(ar, acf0)
+        se_ar = @inferred sem_cor(ar, acf0)
         [se_a, se_am, se_az, se_ar]
         # the few missing do not lead to large deviations
         @test se_am ≈ se_a atol=0.02
@@ -102,13 +98,21 @@ using OffsetArrays, RecursiveArrayTools
         # the exactmissing-false case may lead to lower estimates
         # of unceertainty than without missings?
     end;
+    @testset "semcor calling without acf" begin
+        @test @inferred sem_cor(a; exactmissing=true) == sem_cor(a, autocor_effective(a))
+        @test @inferred sem_cor(a; exactmissing=false) == sem_cor(a, autocor_effective(a))
+        @test @inferred sem_cor(am; exactmissing=true) == sem_cor(am, autocor_effective(am))
+        @test @inferred sem_cor(am; exactmissing=false) == sem_cor(am, 
+            autocor_effective(am, autocor(am; exactmissing=false)); 
+            exactmissing=false)
+    end;
     @testset "semcor with many random missings" begin
         b = allowmissing(a);
         Random.seed!(1234)
         b[sample(axes(a,1),60, replace=false)] .= missing;
-        se_a = sem_cor(a, acf0)
-        se_b = sem_cor(b, acf0)
-        se_be = sem_cor(b)
+        se_a = @inferred sem_cor(a, acf0)
+        se_b = @inferred sem_cor(b, acf0)
+        se_be = @inferred sem_cor(b)
         # uncertainty increases due to missings (fewer obs)
         @test se_b > se_a
         #@test se_be > se_a

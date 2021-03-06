@@ -116,7 +116,7 @@ function sem_cor(x; exactmissing::Bool=true)
     sem_cor(x, acfe; exactmissing=exactmissing)
 end,
 function sem_cor(x, acfe; exactmissing::Bool=true, neff=nothing)
-    length(x) <= 1 && return(std(x))
+    length(x) <= 1 && return(std(skipmissing(x)))::eltype(x)
     if isnothing(neff); neff = effective_n_cor(x, acfe; exactmissing=exactmissing); end
     σ2 = var_cor(x, acfe; neff=neff)
     √(σ2/neff)
@@ -144,7 +144,7 @@ Var(x) = \frac{n_{eff}}{n (n_{eff}-1)} \sum \left( x_i - \bar{x} \right)^2
 """
 function var_cor(x, acfe; exactmissing::Bool=true, neff=nothing)
     n = length(x)
-    n <= 1 && return(var(x))
+    n <= 1 && return(var(skipmissing(x)))::eltype(x)
     nmiss = count(ismissing.(x))
     nfin = n - nmiss
     if isnothing(neff); neff = effective_n_cor(x, acfe; exactmissing=exactmissing); end
