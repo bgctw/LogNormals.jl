@@ -1,6 +1,7 @@
 using LogNormals
 using Test, Distributions, LinearAlgebra, StatsBase, Missings, Random
 using OffsetArrays, RecursiveArrayTools
+using Unitful
 
 @testset "sem_cor" begin
     acf0 = [1,0.4,0.1]
@@ -10,12 +11,15 @@ using OffsetArrays, RecursiveArrayTools
     a = rand(dmn);    
     am = allowmissing(a); am[3:4] .= missing;
     az = copy(a); az[3:4] .= 0.0;
+    amu = am .* u"m"; # unitful missing vector of meters
     @testset "count_forlags" begin
         pred(x_i, x_iplusk) = ismissing(x_i) || ismissing(x_iplusk)
         x = [1,2,missing,missing,5]
         lags = 0:4
         nmiss = @inferred count_forlags(pred, x, lags)
         @test nmiss == [2,3,3,1,0]
+        nmissu = @inferred count_forlags(pred, x.*u"m", lags)
+        @test nmissu == nmiss
         # test for custom indices
         nmiss2 = count_forlags(pred, OffsetArray(x,-1), lags)
         @test nmiss2 == nmiss
@@ -46,6 +50,8 @@ using OffsetArrays, RecursiveArrayTools
         @test acfem[4] ≈ acfez[4]*98/97
         # lag4: two missings as in z
         @test acfem[5:end] ≈ acfez[5:end]
+        # TODO after StatsBase.autocor can deal with unitful
+        #acfemu = @inferred autocor((am.-meana).*u"m", lags; demean=false);
     end;
     @testset "autocor_effective" begin
         effa = @inferred autocor_effective(a, acf0)
