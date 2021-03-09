@@ -25,12 +25,12 @@ Var(\bar{x}) = {Var(x) \over n_{eff}}
 There are only ``n_{eff}`` number of effective obserservations
 in the series.
 ```@docs
-effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
+effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy)
 ```
 
 ## Standard error of the mean of a correlated series
 ```@docs
-sem_cor(x::Any, acfe::Any; exactmissing::Bool=true, neff=nothing)
+sem_cor(x::Any, acfe::Any, ms::MissingStrategy; neff=nothing)
 ```
 
 The default estiamtes the empirical autocorrelation from the given series. 
@@ -41,19 +41,18 @@ the daily applications of `sem_cor` using argument `acfe`.
 
 ## Variance of a correlated series
 ```@docs
-var_cor(x::Any, acfe::Any; exactmissing::Bool=true, neff=nothing)
+var_cor(x::Any, acfe::Any, ms::MissingStrategy; neff=nothing)
 ```
 
 ## Effective autocorrelation function
 ```@docs
-autocor_effective(x::Any, acf::Any)
+autocor_effective(x, acf::AbstractVector)
 ```
 
 ## Autocorrelation of a series with missing values
 ```@docs
- autocor(x::AbstractVector{Union{Missing,T}}, 
-    lags::AbstractVector{<:Integer}=StatsBase.default_autolags(size(x,1)); 
-    demean::Bool=true, exactmissing::Bool=true, kwargs...) where T <: Real
+autocor(x::AbstractVector{Union{Missing,T}}, 
+    ms::MissingStrategy=PassMissing(); kwargs... ) where {T<:Real}
 ```
 
 ```@docs

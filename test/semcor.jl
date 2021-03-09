@@ -14,6 +14,10 @@ using Unitful
     amu = am .* u"m"; # unitful missing vector of meters
     @testset "count_forlags" begin
         pred(x_i, x_iplusk) = ismissing(x_i) || ismissing(x_iplusk)
+        x = [1,2,missing,missing,5,6]
+        lags = 0:5
+        nmiss = @inferred count_forlags(pred, x, lags)
+        @test nmiss == [2,3,4,2,0,0]
         x = [1,2,missing,missing,5]
         lags = 0:4
         nmiss = @inferred count_forlags(pred, x, lags)
@@ -31,14 +35,21 @@ using Unitful
         # for comparability center all around nomissing mean
         meana = mean(a)
         lags = 0:8
+        acfe1 = @inferred autocor(a, lags) # StatsBase still works
+        acfe2 = @inferred autocor(a, lags, PassMissing()) # can supply Missing clause
+        @test acfe1 == acfe2
+        # get only missing if not explicitly requesting SkipMissing or ExactMissing
+        ismissing(@inferred(Vector{Float64},autocor(am, lags, PassMissing(); demean=false)))
+        ismissing(@inferred(Vector{Float64},autocor(am, lags)))
+        ismissing(@inferred(Vector{Float64},autocor(am, lags; demean=false)))
         acfe = @inferred autocor(a.-meana, lags; demean=false);
-        acfem = @inferred autocor(am.-meana, lags; demean=false);
+        acfem = @inferred(autocor(am.-meana, lags, ExactMissing(); demean=false))
         acfes = @inferred autocor((a.-meana)[4:end], lags; demean=false) # different nobs
         azdemean = copy(a.-meana); azdemean[ismissing.(am)] .= 0.0
         acfez = @inferred autocor(azdemean, lags; demean=false);
-        acfemf = @inferred autocor(am.-meana, lags; demean=false, exactmissing=false);
+        acfemf = @inferred autocor(am.-meana, lags, SkipMissing(); demean=false);
         hcat(acfe, acfem, acfez, acfemf)[1:4,:]
-        # without exactmissing: missing same as vector with zeros
+        # with SkipMissing() rather than ExactMissing(): missing same as vector with zeros
         @test acfemf == acfez
         @test acfem[1] == acfez[1] == 1
         # with excactmissing: correct var(x) by two missings (100-2) 
@@ -72,14 +83,22 @@ using Unitful
         # no correlation estimate for lag 3
         neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05])
         @test neff3 ≈ 1.43 atol=0.01 # regression test
+        # without specifying acf
+        neff = @inferred effective_n_cor(am)
+        @test neff == effective_n_cor(am, autocor(am, ExactMissing()))
     end;
     @testset "var_cor" begin
+        va1 = @inferred var_cor(a, acf0, ExactMissing())
+        va2 = @inferred var_cor(a, acf0, PassMissing())
         va = @inferred var_cor(a, acf0)
-        vam = @inferred var_cor(am, acf0)
-        #@code_warntype var_cor(am, acf0; exactmissing=true, neff=nothing)
-        @test isnan(var_cor(am[[3]],acf0))
-        @test isnan(var_cor(am[2:3],acf0)) # only one non-missing
-        vamf = @inferred var_cor(am, acf0; exactmissing=false)
+        @test va == va1 == va2
+        # need to specify handling of missing otherwise get missing back
+        ismissing(@inferred(Float64,var_cor(am, acf0)))
+        vam = @inferred var_cor(am, acf0, ExactMissing())
+        #@code_warntype var_cor(am, acf0, ms=ExactMissing(); neff=nothing)
+        @test isnan(var_cor(am[[3]],acf0, ExactMissing()))
+        @test isnan(var_cor(am[2:3],acf0, ExactMissing())) # only one non-missing
+        vamf = @inferred var_cor(am, acf0, SkipMissing())
         # larger uncertainty with missings
         @test vam > va
         # not correcting neff for missings overestimates neff
@@ -88,11 +107,12 @@ using Unitful
     end;
     @testset "semcor with same effective acf" begin
         se_a = @inferred sem_cor(a, acf0)
-        se_am = @inferred sem_cor(am, acf0)
-        @test isnan(sem_cor(am[[3]],acf0))
+        ismissing(@inferred(Float64, sem_cor(am, acf0)))
+        se_am = @inferred sem_cor(am, acf0, ExactMissing())
+        @test isnan(sem_cor(am[[3]],acf0, ExactMissing()))
         se_az = @inferred sem_cor(az, acf0)
         ar = filter(x -> !ismissing(x), am)
-        se_ar = @inferred sem_cor(ar, acf0)
+        se_ar = @inferred Missing sem_cor(ar, acf0)
         [se_a, se_am, se_az, se_ar]
         # the few missing do not lead to large deviations
         @test se_am ≈ se_a atol=0.02
@@ -101,30 +121,44 @@ using Unitful
         # caring for missing pairs in correlation also has larger stderror
         # because some of larger relative error in sum_normals
         @test se_am > se_a 
-        # the exactmissing-false case may lead to lower estimates
+        # the SkipMissing() case may lead to lower estimates
         # of unceertainty than without missings?
     end;
     @testset "semcor calling without acf" begin
-        @test @inferred sem_cor(a; exactmissing=true) == sem_cor(a, autocor_effective(a))
-        @test @inferred sem_cor(a; exactmissing=false) == sem_cor(a, autocor_effective(a))
-        @test @inferred sem_cor(am; exactmissing=true) == sem_cor(am, autocor_effective(am))
-        @test @inferred sem_cor(am; exactmissing=false) == sem_cor(am, 
-            autocor_effective(am, autocor(am; exactmissing=false)); 
-            exactmissing=false)
+        @test @inferred sem_cor(a, ExactMissing()) ≈ sem_cor(a, autocor_effective(a))
+        @test @inferred sem_cor(a, SkipMissing()) ≈ sem_cor(a, autocor_effective(a))
+        @test @inferred sem_cor(a, PassMissing()) == sem_cor(a, autocor_effective(a))
+        @test @inferred sem_cor(am, ExactMissing()) == sem_cor(am, 
+            autocor_effective(am, ExactMissing()), ExactMissing())
+        @test @inferred sem_cor(am, SkipMissing()) == sem_cor(am, 
+            autocor_effective(am, SkipMissing()), SkipMissing())
     end;
     @testset "semcor with many random missings" begin
         b = allowmissing(a);
         Random.seed!(1234)
         b[sample(axes(a,1),60, replace=false)] .= missing;
         se_a = @inferred sem_cor(a, acf0)
-        se_b = @inferred sem_cor(b, acf0)
-        se_be = @inferred sem_cor(b)
+        se_b = @inferred Missing sem_cor(b, acf0, ExactMissing())
+        se_be = @inferred Missing sem_cor(b, ExactMissing())
         # uncertainty increases due to missings (fewer obs)
         @test se_b > se_a
         #@test se_be > se_a
         # regression tests with random seed 1234
         @test se_b ≈ 0.18 atol = 0.01
     end;
+   @testset "semcor short series" begin
+        @test isnan(@inferred(var_cor([1.0])))
+        @test isnan(@inferred(sem_cor([1.0])))
+        @test @inferred sem_cor(1.0:2) == 0.5
+        @test @inferred sem_cor(1.0:3) == sqrt(var(1:3)/3)
+        @test @inferred var_cor(fill(1.0,4)) == 0.0 
+        @test @inferred sem_cor(fill(1.0,4)) == 0.0 # NA correlation but 0 variance
+        @test ismissing(@inferred(Float64, sem_cor([1.0,2,missing])))
+        @test ismissing(@inferred(Float64, var_cor([1.0,2,missing])))
+        @test @inferred var_cor([1.0,2,missing], ExactMissing()) == 0.5
+        @test @inferred sem_cor([1.0,2,missing], ExactMissing()) == sqrt(0.5/2)
+        @test isnan(@inferred sem_cor([1,missing,missing], ExactMissing()))
+   end;
 end;
 
 @testset "autocorr with many missings" begin
@@ -144,8 +178,8 @@ end;
         # outer product see https://stackoverflow.com/a/44592419
         #igap0.+Base.OneTo(clustersize)' 
         b[igap0.+Base.OneTo(clustersize)'] .= missing;
-        ae = autocor(b, 1:2; exactmissing=true)
-        af = autocor(b, 1:2; exactmissing=false)
+        ae = autocor(b, 1:2, ExactMissing())
+        af = autocor(b, 1:2, SkipMissing())
         (ae, af)
     end;
     aeb, afb = VectorOfArray.(vectuptotupvec(resboot));

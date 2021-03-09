@@ -15,11 +15,12 @@ function boot_sem_cor()
     igap = sample(1:nsum,trunc(Int,nsum*probgap), replace=false)
     b = allowmissing(rand(dmn));
     b[igap] .= missing;
+    sem_cor(b, acf0, ExactMissing())
     nboot = 10_000
     resboot = map(1:nboot) do iboot
         b = allowmissing(rand(dmn));
         b[igap] .= missing
-        sum(skipmissing(b)), mean(skipmissing(b)), sem_cor(b, acf0)
+        sum(skipmissing(b)), mean(skipmissing(b)), sem_cor(b, acf0, ExactMissing())
     end;
     sums_boot, means_boot, semcor_boot = vectuptotupvec(resboot);
     mean(sums_boot), std(sums_boot)
@@ -30,7 +31,7 @@ function boot_sem_cor()
     dmean = mean(dvn, AutoCorrelationFunction(acf0); skipmissings=Val(true))
     @test dmean.σ ≈ std(means_boot) atol=0.01
     # mean over Normals with missings works
-    function sem_cor_benchmark(x, acfe; exactmissing=true)
+    function sem_cor_benchmark(x, acfe, ms::MissingStrategy=ExactMissing())
         n = length(x)
         n <= 1 && return(std(x))
         nmiss = count(ismissing.(x))
@@ -39,7 +40,7 @@ function boot_sem_cor()
         σ2uncorr = var(skipmissing(x))
         # BLUE Var(x) for correlated: Zieba11 eq.(1) 
         σ2 = σ2uncorr*(nfin-1)*neff/(nfin*(neff-1))
-        if exactmissing && (nmiss != 0)
+        if ms == ExactMissing() && (nmiss != 0)
             σ = Fill(√σ2, n)
             dv = ParamDistributionVector(Normal{nonmissingtype(eltype(x))}, x, σ)
             acfes = n < length(acfe) ? view(acfe,1:n) : acfe
@@ -52,13 +53,13 @@ function boot_sem_cor()
     end
     res_sem_cor = sem_cor(b, acf0)
     @test res_sem_cor ≈ std(means_boot) atol=0.02
-    res_sem_cor2a = sem_cor_benchmark(b, acf0, exactmissing = true)
+    res_sem_cor2a = sem_cor_benchmark(b, acf0, ms=ExactMissing())
     @test res_sem_cor2a ≈ std(means_boot) atol=0.02
-    res_sem_cor2b = sem_cor_benchmark(b, acf0, exactmissing = false)
+    res_sem_cor2b = sem_cor_benchmark(b, acf0, , ms=SkipMissing())
     @test res_sem_cor2b ≈ std(means_boot) atol=0.02
     #using BenchmarkTools: @btime
-    @btime sem_cor_benchmark($b, $acf0, exactmissing = true)
-    @btime sem_cor_benchmark($b, $acf0, exactmissing = false)
+    @btime sem_cor_benchmark($b, $acf0, ms=ExactMissing())
+    @btime sem_cor_benchmark($b, $acf0, ms=SkipMissing())
     # neff based method much faster
     function tmpf()
         #using StatsPlots
@@ -90,8 +91,8 @@ function inspect_lags_autocorrelation()
         # outer product see https://stackoverflow.com/a/44592419
         #igap0.+Base.OneTo(clustersize)' 
         b[igap0.+Base.OneTo(clustersize)'] .= missing;
-        ae = autocor(b, 1:2; exactmissing=true)
-        af = autocor(b, 1:2; exactmissing=false)
+        ae = autocor(b, 1:2, ms=ExactMissing())
+        af = autocor(b, 1:2, ms=SkipMissing())
         (ae, af)
     end;
     ae, af = VectorOfArray.(vectuptotupvec(resboot));

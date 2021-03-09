@@ -27,35 +27,45 @@ function count_forlags(pred, x,lags::AbstractVector)
 end
 
 """
-    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags; dmean::Bool=true, exactmissing=true}
+    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags, ms::MS=PassMissing(); dmean::Bool=true}
 
 Estimate the autocorrelation function accounting for missing values.
 
 # Arguments
 - `x`: series, which may contain missing values
 - `lags`: Integer vector of the lags for which correlation should be computed
+- `ms`: [`MissingStrategy`](@ref). If `ExactMissing()` then divide the sum
+   in the formula of the exepected value in the formula for the correlation
+   at lag `k` by `n - nmissing` instead of `n`, 
+   where `nimissing` is the number of records where there is a missing either
+   in the original vector or its lagged version (see [`count_forlags`](@ref)).
 - `deman`: if `false`, assume `mean(x)==0`.
-- `exactmissing`: If set to `true` then divide the sum
-    in the formula of the exepected value in the formula for the correlation
-    at lag `k` by `n - nmissing` instead of `n`, 
-    where `nimissing` is the number of records where there is a missing either
-    in the original vector or its lagged version (see [`count_forlags`](@ref)).
+- `skipmissings`: need to explicitly request `skipmissings=Val(true)` to 
+    to consciously deal with missing values.
 
-If `exactmissing=false` then the computation is faster, but
-it is more strongly biased low with increasing number of missings. 
+If the missing strategy is set to `SkipMissing()` then the computation is faster, 
+but it is more strongly biased low with increasing number of missings. 
 Note that `StatsBase.autocor` uses devision by `n` instead of 'n-k', the
 true length of the vectors correlated at lag `k` resulting in 
 low-biased correlations of higher lags for numerical stability reasons.
 """
 function autocor(x::AbstractVector{Union{Missing,T}}, 
-    lags::AbstractVector{<:Integer}=StatsBase.default_autolags(size(x,1)); 
-    demean::Bool=true, exactmissing::Bool=true, kwargs...) where T <: Real
+    ms::MissingStrategy=PassMissing(); kwargs... ) where {T<:Real} 
+    autocor(x, StatsBase.default_autolags(size(x,1)), ms, kwargs...)
+end,
+function autocor(x::AbstractVector{Union{Missing,T}}, 
+    lags::AbstractVector{<:Integer},
+    ms::MS=PassMissing(); demean::Bool=true, kwargs... ) where 
+    {T<:Real,MS<:MissingStrategy}
+    # if not inheriting from missing, use the StatsBase standard
+    !(Missing <: eltype(x)) && return(autocor(x, lags; demean=demean, kwargs...))
+    MS == PassMissing && any(ismissing.(x)) && return(missing)
     # only set to zero after demeaning, otherwise correlation estimates increase
     z::Vector{Union{Missing,T}} = demean ? x .- mean(skipmissing(x)) : x
     # replace missing by zero: new type will not match signature of current function 
     zpure = coalesce.(z, zero(z))::Vector{T} 
     acf = autocor(zpure,lags;demean=false,kwargs...)
-    !exactmissing && return(acf)
+    MS != ExactMissing && return(acf)
     # correct for sum has been devided by a larger number of terms
     # (including terms of missing/0) 
     lx = length(x)
@@ -71,14 +81,20 @@ function autocor(x::AbstractVector{Union{Missing,T}},
     end
     acf
 end
+# accept MissingStrategy for methods with Missing not part of eltype
+autocor(x::StatsBase.RealVector, ms::MissingStrategy; kwargs...) = autocor(x; kwargs...)
+autocor(x::StatsBase.RealVector, lags::StatsBase.IntegerVector, ms::MissingStrategy; 
+    kwargs...) = autocor(x, lags; kwargs...)
 
 """
-    autocor_effective(x, acf = autocor(x))
+    autocor_effective(x, ms::MissingStrategy=PassMissing())
+    autocor_effective(x, acf)
 
 Estimate the effective autocorrelation function for series x.
 
 # Arguments
 - `x`: An iterator of a series of observations
+- `ms`: [`MissingStrategy`](@ref) passed to [`autocor`](@ref)
 - `acf`: AutocorrelationFunction starting from lag 0
 
 # Notes
@@ -88,10 +104,13 @@ Estimate the effective autocorrelation function for series x.
 - According to Zieba 2011 using this effective version rather the full version
   when estimating the autocorrelationfunction from the data
   yields better result for the standard error of the mean ([`sem_cor`](@ref)).
-- Optional argument `acf` allows the caller to provide a different estimate
-  of autocorrelation function e.g. using `exactmissing=false` in [`autocor`](@ref).
+- Optional argument `acf` allows the caller to provide a precomputed estimate
+  of autocorrelation function (see [`autocor`](@ref)).
 """
-function autocor_effective(x, acf = autocor(x))
+function autocor_effective(x, ms::MissingStrategy=PassMissing()) 
+    autocor_effective(x, autocor(x, ms))
+end,
+function autocor_effective(x, acf::AbstractVector)
     #maybe implement a more efficient version that computes only the
     # first lags and further lags if not found negative correlation
     i = findfirst(x -> x <= 0.0, acf)
@@ -99,37 +118,44 @@ function autocor_effective(x, acf = autocor(x))
     acf[1:(i-1)]
 end
 
+
 @doc raw"""
-    sem_cor(x; exactmissing::Bool=true)
-    sem_cor(x, acf::AbstractVector; exactmissing::Bool=true)
+    sem_cor(x, ms::MissingStrategy=PassMissing())
+    sem_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
 
 Estimate the standard error of the mean of an autocorrelated series:
 ``Var(\bar{x}) = {Var(x) \over n_{eff}}``.    
 
 # Arguments
 - `x`: An iterator of a series of observations
-- `acf`: AutocorrelationFunction starting from lag 0. If not specified
-  it is estimated from the data using provided value of `exactmissing`.
+- `acf`: AutocorrelationFunction starting from lag 0. 
+- `ms`: [`MissingStrategy`](@ref) passed to [`effective_n_cor`](@ref).
+  Value of `SkipMissing()` speeds up computation compared to `ExactMissing()`,
+  but leads to a negatively biased result with absolute value of the bias 
+  increasing with the number of missings.
 
 # Optional Arguments
-- `exactmissing`: passed to [`effective_n_cor`](@ref) allowing to speed up computation,
-  but leading to a negatively biased result with bias increasing with number of missings.
 - `neff`: may provide a precomputed number of observations for efficiency.
 """
-function sem_cor(x; exactmissing::Bool=true) 
-    Missing <: eltype(x) || return(sem_cor(x, autocor_effective(x)))
-    acfe = autocor_effective(x, autocor(x, exactmissing=exactmissing))
-    sem_cor(x, acfe; exactmissing=exactmissing)
+function sem_cor(x, ms::MissingStrategy=PassMissing(); kwargs...) 
+    sx = typeof(ms) <: HandleMissingStrategy ? std(skipmissing(x)) : std(x)::eltype(x)
+    ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
+    #!(Missing <: eltype(x)) && return(sem_cor(x, autocor_effective(x)))
+    acfe = autocor_effective(x, ms; kwargs...)
+    sem_cor(x, acfe, ms)
 end,
-function sem_cor(x, acfe; exactmissing::Bool=true, neff=nothing)
-    length(x) <= 1 && return(std(skipmissing(x)))::eltype(x)
-    if isnothing(neff); neff = effective_n_cor(x, acfe; exactmissing=exactmissing); end
-    σ2 = var_cor(x, acfe; neff=neff)
+function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
+    sx = typeof(ms) <: HandleMissingStrategy ? std(skipmissing(x)) : std(x)::eltype(x)
+    ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
+    #length(x) <= 1 && return(sx)
+    if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
+    σ2 = var_cor(x, acfe, ms; neff=neff)
     √(σ2/neff)
 end
 
 @doc raw"""
-    var_cor(x, acfe; exactmissing::Bool=true, neff=nothing)
+    var_cor(x, ms::MissingStrategy=PassMissing())
+    var_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
 
 Estimate the variance for an autocorrelated series.
 
@@ -141,26 +167,43 @@ Var(x) = \frac{n_{eff}}{n (n_{eff}-1)} \sum \left( x_i - \bar{x} \right)^2
 
 # Arguments
 - `x`: An iterator of a series of observations
-- `acf`: AutocorrelationFunction starting from lag 0
+- `acf`: AutocorrelationFunction starting from lag 0. 
+- `ms`: [`MissingStrategy`](@ref) passed to [`effective_n_cor`](@ref).
+  Value of `SkipMissing()` speeds up computation compared to `ExactMissing()`,
+  but leads to a negatively biased result with absolute value of the bias 
+  increasing with the number of missings.
 
 # Optional Arguments
-- `exactmissing`: passed to [`effective_n_cor`](@ref) allowing to speed up computation,
-    leading to a slighly positively biased result with small `neff` and many missings.
-- `neff`: may provide a precomputed number of observations for efficiency.      
+- `neff`: may provide a precomputed number of observations for efficiency.
 """
-function var_cor(x, acfe; exactmissing::Bool=true, neff=nothing)
+function var_cor(x, ms::MissingStrategy=PassMissing(); neff=nothing) 
+    varx = typeof(ms) <: HandleMissingStrategy ? var(skipmissing(x)) : var(x)::eltype(x)
+    ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
+    acf = autocor(x, ms)
+    var_cor(x, autocor_effective(x, acf), ms)
+end,
+function var_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
+    varx = typeof(ms) <: HandleMissingStrategy ? var(skipmissing(x)) : var(x)::eltype(x)
+    ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
     n = length(x)
-    n <= 1 && return(var(skipmissing(x)))::eltype(x)
     nmiss = count(ismissing.(x))
     nfin = n - nmiss
-    if isnothing(neff); neff = effective_n_cor(x, acfe; exactmissing=exactmissing); end
+    if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
     σ2uncorr = var(skipmissing(x))
     # BLUE Var(x) for correlated: Zieba11 eq.(1) 
     σ2 = σ2uncorr*(nfin-1)*neff/(nfin*(neff-1))
 end
 
+function early_var_return(x, varx=var(x))
+    ismissing(varx) && return(missing)
+    !isfinite(varx) && return(varx)
+    varx == zero(varx) && return(varx)
+    nothing
+end
+
 @doc raw"""
-    effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
+    effective_n_cor(x, ms::MissingStrategy=ExactMissing()) 
+    effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=ExactMissing())
 
 Compute the number of effective observations for an autocorrelated series.
 
@@ -176,14 +219,12 @@ used autocorrelation function (``n-1`` if not estimated from the data)
 
 # Arguments
 - `x`: An iterator of a series of observations
-- `acf`: AutocorrelationFunction starting from lag 0
-
-# Optional Arguments
-- `exactmissing`: set to `false` to speed up computation 
+- `ms`: [`MissingStrategy`](@ref): set to `SkipMissing()` to speed up computation 
   (omitting [`count_forlags`](@ref) missing pairs) 
   but get a positively biased
   result with increasing bias with the number of missings. 
   This leads to a subsequent underestimated uncertainty of the sum or the mean.
+- `acf`: AutocorrelationFunction starting from lag 0
 
 # Examples
 ```jldoctest; output = false, setup = :(using LogNormals, Distributions, LinearAlgebra, Missings)
@@ -195,17 +236,20 @@ x = allowmissing(rand(dmn));
 x[11:20] .= missing
 neff = effective_n_cor(x, acf0)
 neff < 90
-neff_biased = effective_n_cor(x, acf0; exactmissing=false)
+neff_biased = effective_n_cor(x, acf0, SkipMissing())
 neff_biased > neff
 # output
 true
 ```
 """
-function effective_n_cor(x, acf::AbstractVector; exactmissing::Bool=true)
+function effective_n_cor(x, ms::MissingStrategy=ExactMissing())
+    effective_n_cor(x, autocor(x,ms), ms)
+end,
+function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=ExactMissing())
     # Zieba 2001 eq.(3)
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
-    if exactmissing && (Missing <: eltype(x))
+    if ms == ExactMissing() && (Missing <: eltype(x))
         # see derivation in sem_cor.md
         # number of missing combinations due to missing in x
         #only julia 1.6 (m0, mk...) = count_forlags(ismissing,x,0:length(k))

@@ -17,7 +17,8 @@ export AbstractMoments, Moments, n_moments, moments,
     sum_normals,
     cormatrix_for_acf,
     vectuptotupvec,
-    autocor_effective, effective_n_cor, count_for_lag, count_forlags, sem_cor, var_cor
+    autocor_effective, effective_n_cor, count_for_lag, count_forlags, sem_cor, var_cor,
+    MissingStrategy, HandleMissingStrategy, PassMissing, SkipMissing, ExactMissing
 
 import Random: rand, rand!
 import Base: sum, size
@@ -27,6 +28,9 @@ import StatsBase: coef, autocor
 using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays, OffsetArrays
 using Random
+
+# MissingStrategy
+include("missingstrategy.jl")
 
 # general fitting to statistics
 include("fitstats.jl")
