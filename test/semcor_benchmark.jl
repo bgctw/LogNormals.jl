@@ -27,8 +27,8 @@ function boot_sem_cor()
     mean(means_boot), std(means_boot)
     dvn = SimpleDistributionVector(Fill(Normal(1,1), nsum)...);
     dvn[ismissing.(b)] .= missing;
-    dsum = sum(dvn, AutoCorrelationFunction(acf0); skipmissings=Val(true))
-    dmean = mean(dvn, AutoCorrelationFunction(acf0); skipmissings=Val(true))
+    dsum = sum(dvn, AutoCorrelationFunction(acf0), SkipMissing())
+    dmean = mean(dvn, AutoCorrelationFunction(acf0), SkipMissing())
     @test dmean.σ ≈ std(means_boot) atol=0.01
     # mean over Normals with missings works
     function sem_cor_benchmark(x, acfe, ms::MissingStrategy=ExactMissing())
@@ -44,7 +44,7 @@ function boot_sem_cor()
             σ = Fill(√σ2, n)
             dv = ParamDistributionVector(Normal{nonmissingtype(eltype(x))}, x, σ)
             acfes = n < length(acfe) ? view(acfe,1:n) : acfe
-            dm = mean(dv, AutoCorrelationFunction(acfes); skipmissings=Val(true))
+            dm = mean(dv, AutoCorrelationFunction(acfes), SkipMissing())
             #@show acfes, dm, length(dv), count(ismissing,dv), count(ismissing,x)
             return(dm.σ)
         else
@@ -55,7 +55,7 @@ function boot_sem_cor()
     @test res_sem_cor ≈ std(means_boot) atol=0.02
     res_sem_cor2a = sem_cor_benchmark(b, acf0, ms=ExactMissing())
     @test res_sem_cor2a ≈ std(means_boot) atol=0.02
-    res_sem_cor2b = sem_cor_benchmark(b, acf0, , ms=SkipMissing())
+    res_sem_cor2b = sem_cor_benchmark(b, acf0, ms=SkipMissing())
     @test res_sem_cor2b ≈ std(means_boot) atol=0.02
     #using BenchmarkTools: @btime
     @btime sem_cor_benchmark($b, $acf0, ms=ExactMissing())

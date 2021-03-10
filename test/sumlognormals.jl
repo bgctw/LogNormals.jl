@@ -36,11 +36,11 @@ end
     @testset "with missings" begin
         dv = SimpleDistributionVector(d1, missing);
         @test isequal(collect(dv),[d1, missing])
-        @test_throws Exception dsum2 = sum(dv) # without skipmissings
+        @test_throws Exception dsum2 = sum(dv) # without skipmissing
         dsum2 = @inferred sum(skipmissing(dv))
         @test dsum2 == d1
-        #a,b = sum(dv; skipmissings = Val(true))
-        dsum3 = @inferred sum(dv; skipmissings = Val(true))
+        #a,b = sum(dv,SkipMissing())
+        dsum3 = @inferred sum(dv,SkipMissing())
         @test dsum3 == d1
         #@btime sum(skipmissing($dv)) # does not allocate
     end;
@@ -63,8 +63,8 @@ end
       dv = SimpleDistributionVector(d1, d2, d1, missing);
       isgapfilled = [true, true, false, false]
       dsum5 = @inferred sum(dv[1:3], isgapfilled=isgapfilled[1:3])
-      dsum = @inferred sum(dv, isgapfilled=isgapfilled, skipmissings = Val(true))
-      #@code_warntype sum(dv, isgapfilled=isgapfilled, skipmissings = Val(true))
+      dsum = @inferred sum(dv, isgapfilled=isgapfilled, SkipMissing())
+      #@code_warntype sum(dv, isgapfilled=isgapfilled, SkipMissing())
       @test dsum == dsum5
     end;
 end;
@@ -98,13 +98,13 @@ end;
   @testset "matrix with missing" begin
     @test_throws ErrorException dsumm = sum(dvm, Symmetric(corrM))
     #S = similar(mum);
-    dsumm = @inferred sum(dvm, Symmetric(corrM); skipmissings = Val(true) )
+    dsumm = @inferred sum(dvm, Symmetric(corrM), SkipMissing())
     # checked from sample
     # boot_dvsums_acf(dvm[2:end], acf1)
     #@test σstar(dsumm) ≈ 1.15 rtol = 0.02
     @test params(dsumm)[2] ≈ 0.141 rtol = 0.02
     @test_throws ErrorException dsumm2 = sum(dvm, acf1)
-    dsumm2 = @inferred sum(dvm, acf1; skipmissings = Val(true))
+    dsumm2 = @inferred sum(dvm, acf1, SkipMissing())
     @test all(params(dsumm2) .≈ params(dsumm))
   end;
   @testset "with gapfilling flag" begin
@@ -117,18 +117,18 @@ end;
   end;
   @testset "with missings and gapfilling flag" begin
     isgapfilled = fill(false, length(dvm)); isgapfilled[4:end] .= true
-    dsum4 = sum(dvm, Symmetric(corrM); skipmissings = Val(true))
+    dsum4 = sum(dvm, Symmetric(corrM), SkipMissing())
     dsum4b = @inferred sum(
-      dvm, Symmetric(corrM), isgapfilled=isgapfilled, skipmissings = Val(true))
+      dvm, Symmetric(corrM), SkipMissing(), isgapfilled=isgapfilled)
     #@code_warntype sum(dvm, isgapfilled=isgapfilled)
     @test mean(dsum4b) == mean(dsum4)
     @test std(dsum4b) > std(dsum4)
     # acf variant 
     dsum5b = @inferred sum(
-      dvm, acf1, isgapfilled=isgapfilled, skipmissings = Val(true))
+      dvm, acf1, SkipMissing(), isgapfilled=isgapfilled)
     @test dsum5b == dsum4b
     dsum5c = @inferred sum(
-      dvm, acf1, isgapfilled=isgapfilled; skipmissings = Val(true), 
+      dvm, acf1, SkipMissing(), isgapfilled=isgapfilled, 
       method = Val(:bandedmatrix))
     @test dsum5c == dsum4b
   end;

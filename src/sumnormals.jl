@@ -1,10 +1,9 @@
-function sum(dv::AbstractDistributionVector{<:Normal}; 
-    isgapfilled::AbstractVector{Bool} = Falses(length(dv)), 
-    skipmissings::Val{B} = Val(false)) where B
+function sum(dv::AbstractDistributionVector{<:Normal}, ms::MissingStrategy=PassMissing(); 
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)))
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
-    if B == true
+    if typeof(ms) <: HandleMissingStrategy
         # need to allocate anyway with subsetting
         nonmissing = findall(.!ismissing.(dv))
         if !isempty(nonmissing) 
@@ -30,44 +29,39 @@ function sum(dv::AbstractDistributionVector{<:Normal};
 end
 
 function sum(dv::AbstractDistributionVector{D}, 
-    acf::AutoCorrelationFunction;
-    isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
+    acf::AutoCorrelationFunction, ms::MissingStrategy=PassMissing();
+    isgapfilled::AbstractVector{Bool}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-       Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false)) where 
-    {D<:Normal, DS<:eltype(D), SM}
+       Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
+    {D<:Normal, DS<:eltype(D)}
     # currently use Matrix-method, Maybe implement fast with loop
     corrM = Symmetric(cormatrix_for_acf(length(dv), coef(acf)))
     return(sum_normals(
-        dv, corrM, 
-        isgapfilled=isgapfilled,skipmissings = skipmissings, storage = storage))
+        dv, corrM, ms;
+        isgapfilled=isgapfilled, storage = storage))
 end
 
 
 function sum(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric; 
+    corr::Symmetric, ms::MissingStrategy=PassMissing(); 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-       Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false)) where 
-    {D<:Normal, DS<:eltype(D), SM}
-    sum_normals(
-        dv, corr, 
-        isgapfilled=isgapfilled, storage=storage, skipmissings=skipmissings)
+       Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
+    {D<:Normal, DS<:eltype(D)}
+    sum_normals(dv, corr, ms; isgapfilled=isgapfilled, storage=storage)
 end
 
 function sum_normals(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric; 
+    corr::Symmetric, ms::MissingStrategy=PassMissing(); 
     isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false)) where 
-    {D<:Normal,SM, DS<:eltype(D)}
+        Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
+    {D<:Normal, DS<:eltype(D)}
     μ = params(dv, Val(1))
     σ = params(dv, Val(2))
     # var_sum (s) is the sum across all Sigma, i.e. σT * corr * σ
     # missings and gapfilled values do not count -> set to zero
-    if SM == true
+    if typeof(ms) <: HandleMissingStrategy
         # check on missings in dv, σ may have more finite values
         @. storage = ifelse(ismissing(dv), zero(DS), σ) #coalesce(σ, zero(DS))  
         Spure = disallowmissing(storage) 
@@ -93,13 +87,15 @@ function sum_normals(dv::AbstractDistributionVector{D},
 end
 
 
-mean(dv::AbstractDistributionVector{<:Normal}; kwargs...) =
-    mean_normals(dv; kwargs...)
-mean(dv::AbstractDistributionVector{<:Normal}, corr::Symmetric; kwargs...) =
-    mean_normals(dv, corr; kwargs...)
-mean(dv::AbstractDistributionVector{<:Normal}, acf::AutoCorrelationFunction; 
-    kwargs...) =
-    mean_normals(dv, acf; kwargs...)
+mean(dv::AbstractDistributionVector{<:Normal}, 
+    ms::MissingStrategy=PassMissing(); kwargs...) =
+    mean_normals(dv, ms; kwargs...)
+mean(dv::AbstractDistributionVector{<:Normal}, corr::Symmetric, 
+    ms::MissingStrategy=PassMissing(); kwargs...) =
+    mean_normals(dv, corr, ms; kwargs...)
+mean(dv::AbstractDistributionVector{<:Normal}, acf::AutoCorrelationFunction, 
+    ms::MissingStrategy=PassMissing(); kwargs...) =
+    mean_normals(dv, acf, ms; kwargs...)
 
 function mean_normals(dv::AbstractDistributionVector{<:Normal}, x...; kwargs...) 
     ds = sum(dv, x...; kwargs...)

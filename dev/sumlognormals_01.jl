@@ -1,6 +1,6 @@
-function sum_lognormals!(S, μ, σ, corr::AbstractMatrix; corrlength = length(μ)-1, 
-    skipmissings::Val{B} = Val(false)) where B
-    if skipmissings == Val(true)
+function sum_lognormals!(S, μ, σ, corr::AbstractMatrix, ms::MissingStrategy=PassMissing(); 
+    corrlength = length(μ)-1)
+    if typeof(ms) <: HandleMissingStrategy
         any(ismissing.(corr)) && error("cannot skip missings in correlation matrix")
         ismiss = ismissing.(μ) .| ismissing.(σ) 
         #.| vec(mapslices((x -> any(ismissing(x))), corr; dims = 1))
@@ -32,14 +32,13 @@ function sum_lognormals!(S, μ, σ, corr::AbstractMatrix; corrlength = length(μ
   LogNormal(μ_sum, √σ2eff)  
 end
 
-function sum_lognormals(μ, σ, corr::AbstractMatrix; corrlength = length(μ)-1, 
-    skipmissings::Val{l} = Val(false)) where l
-    sum_lognormals!(similar(μ), μ, σ, corr, corrlength = corrlength, skipmissings = skipmissings)
+function sum_lognormals(μ, σ, corr::AbstractMatrix, ms::MissingStrategy=PassMissing(); 
+    corrlength = length(μ)-1)
+    sum_lognormals!(similar(μ), μ, σ, corr, ms, corrlength = corrlength)
 end
 
-
-function sum_lognormals(μ, σ; skipmissings::Val{l} = Val(false)) where l
-    if skipmissings == Val(true)
+function sum_lognormals(μ, σ, ms::MissingStrategy=PassMissing())
+    if typeof(ms) <: HandleMissingStrategy
         ismiss = ismissing.(μ) .| ismissing.(σ)
         if any(ismiss) 
             μ = @view μ[.!ismiss]
@@ -84,10 +83,10 @@ function sum_lognormals(ds)
     LogNormal(μ_sum, √σ2eff)
 end
   
-function sum_lognormals!(S, ds, corr::AbstractMatrix; corrlength = length(ds)-1, 
-    skipmissings::Val{l} = Val(false)) where l
+function sum_lognormals!(S, ds, corr::AbstractMatrix, ms::MissingStrategy=PassMissing(); 
+    corrlength = length(ds)-1)
     nterm = length_itr(ds) 
-    if skipmissings == Val(true)
+    if typeof(ms) <: HandleMissingStrategy
         any(ismissing.(corr)) && error("cannot skip missings in correlation matrix")
         ifin = findall(.!ismissing.(ds))
         #.| vec(mapslices((x -> any(ismissing(x))), corr; dims = 1))

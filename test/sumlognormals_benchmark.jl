@@ -9,27 +9,27 @@ function benchmarkSums()
     sigma = log.(rand(Normal(1.2, 0.1), nrep));
     acf1 = [0.8,0.3,0.1];
     dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma)
-    @btime dsum_v = sum($dv, $acf1, skipmissings = Val(true), method = Val(:vector) )
-    @btime dsum_m = sum($dv, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
+    @btime dsum_v = sum($dv, $acf1, SkipMissing(); method = Val(:vector) )
+    @btime dsum_m = sum($dv, $acf1, SkipMissing(); method = Val(:bandedmatrix) )
     # the Bandematrix based slower after optimizing the vector for stability in missings
     #
     # repeat with missings
     mum = allowmissing(copy(mu)); mum[1] = missing
     dv = SimpleDistributionVector(LogNormal{nonmissingtype(eltype(mum))}, mum, sigma)
-    @btime dsum_v = sum($dv, $acf1, skipmissings = Val(true), method = Val(:vector) )
-    @btime dsum_m = sum($dv, $acf1, skipmissings = Val(true), method = Val(:bandedmatrix) )
+    @btime dsum_v = sum($dv, $acf1, SkipMissing(); method = Val(:vector) )
+    @btime dsum_m = sum($dv, $acf1, SkipMissing(); method = Val(:bandedmatrix) )
     #
     #S = similar(mum);
-    @code_warntype sum_lognormals(S, dv, acf1, skipmissings = Val(true))
-    f() = sum_lognormals(S, dv, acf1, skipmissings = Val(true))
+    @code_warntype sum_lognormals(S, dv, acf1, SkipMissing())
+    f() = sum_lognormals(S, dv, acf1, SkipMissing())
     @time f(); @time f()
 
 
 
     # # try allocating instead of view (replace line of view_nonmissing)
     # # allocating is faster
-    # function sum_lognormals2!(S, dv, corr::AbstractMatrix; 
-    #     skipmissings::Val{l} = Val(false)) where l
+    # function sum_lognormals2!(S, dv, corr::AbstractMatrix, 
+    # ms::MissingStrategy=PassMissing())
     #     parms = params(dv)
     #     μ = @view parms[1,:]
     #     σ = @view parms[2,:]
@@ -37,8 +37,8 @@ function benchmarkSums()
     #     @. S = exp(μ + abs2(σ)/2)
     #     nmissing = count(ismissing, S)
     #     anymissing = nmissing != 0
-    #     skipmissings != Val(true) && anymissing && error(
-    #          "Found missing values. Use argument 'skipmissings = Val(true)' to sum over nonmissing.")
+    #     !(typeof(ms) <: HandleMissingStrategy) && anymissing && error(
+    #          "Found missing values. Use argument 'SkipMmissing()' to sum over nonmissing.")
     #     Ssum::nonmissingtype(eltype(S)) = sum(skipmissing(S))
     #     @. S = σ * S  # do only after Ssum
     #     # setting S to zero results in summing zero for missing records
@@ -53,8 +53,8 @@ function benchmarkSums()
     #     #@show Ssum, s, length(S) - nmissing
     #     LogNormal(μ_sum, √σ2eff)  
     # end
-    # @btime sum_lognormals($storage, $dv, $corMa, skipmissings = Val(true) )
-    # @btime sum_lognormals2!($storage, $dv, $corMa, skipmissings = Val(true) )
+    # @btime sum_lognormals($storage, $dv, $corMa, SkipMissing())
+    # @btime sum_lognormals2!($storage, $dv, $corMa, SkipMissing())
 end
 
 

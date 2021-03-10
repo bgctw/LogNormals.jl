@@ -15,7 +15,7 @@ mu = log.([110,100,80])
 sigma = log.([1.2,1.5,1.1])
 acf0 = AutoCorrelationFunction([1,0.4,0.1])
 dv = SimpleDistributionVector(LogNormal{eltype(mu)}, mu, sigma);
-dsum = sum(dv, acf0)
+dsum = sum(dv, acf0, SkipMissing())
 ```
 
 ```@setup boot

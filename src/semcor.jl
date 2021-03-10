@@ -27,7 +27,7 @@ function count_forlags(pred, x,lags::AbstractVector)
 end
 
 """
-    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags, ms::MS=PassMissing(); dmean::Bool=true}
+    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags, ms::MissingStrategy=PassMissing(); dmean::Bool=true}
 
 Estimate the autocorrelation function accounting for missing values.
 
@@ -40,8 +40,6 @@ Estimate the autocorrelation function accounting for missing values.
    where `nimissing` is the number of records where there is a missing either
    in the original vector or its lagged version (see [`count_forlags`](@ref)).
 - `deman`: if `false`, assume `mean(x)==0`.
-- `skipmissings`: need to explicitly request `skipmissings=Val(true)` to 
-    to consciously deal with missing values.
 
 If the missing strategy is set to `SkipMissing()` then the computation is faster, 
 but it is more strongly biased low with increasing number of missings. 

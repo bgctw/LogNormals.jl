@@ -1,10 +1,9 @@
-function sum(dv::AbstractDistributionVector{<:LogNormal}; 
-    isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
-    skipmissings::Val{B} = Val(false)) where B
+function sum(dv::AbstractDistributionVector{<:LogNormal}, ms::MissingStrategy=PassMissing(); 
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)))
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
-    if B == true
+    if typeof(ms) <: HandleMissingStrategy
         nonmissing = findall(.!ismissing.(dv))
         #return( dv[nonmissing], isgapfilled[nonmissing])
         if !isempty(nonmissing) 
@@ -33,36 +32,32 @@ end
 
 
 function sum(dv::AbstractDistributionVector{D}, 
-    acf::AutoCorrelationFunction; 
+    acf::AutoCorrelationFunction, ms::MissingStrategy=PassMissing(); 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)), 
     storage::AbstractVector{Union{Missing,ST}} = 
         Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false),    
     method::Val{M} = Val(:vector)) where 
-    {D<:LogNormal, SM, ST<:eltype(D), M} 
+    {D<:LogNormal, ST<:eltype(D), M} 
     #storage = Vector{Union{Missing,eltype(D)}}(undef, length(dv))
     if M == :vector
         return(sum_lognormals(
-            dv, acf, isgapfilled=isgapfilled, storage = storage, 
-            skipmissings = skipmissings))
+            dv, acf, ms, isgapfilled=isgapfilled, storage = storage))
     end
     if M == :bandedmatrix
         corrM = Symmetric(cormatrix_for_acf(length(dv), coef(acf)))
         return(sum_lognormals(
-            dv, corrM, isgapfilled=isgapfilled,skipmissings = skipmissings, 
-            storage = storage))
+            dv, corrM, ms; isgapfilled=isgapfilled, storage = storage))
     end
     error("Unknown method $method")
 end
 
 function sum_lognormals(dv::AbstractDistributionVector{D}, 
-    acf::AutoCorrelationFunction; 
+    acf::AutoCorrelationFunction, ms::MissingStrategy=PassMissing(); 
     isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-       Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SK} = Val(false)) where 
+       Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
     #{D<:LogNormal, ST<:, B}
-    {D<:LogNormal, DS<:eltype(D), SK}
+    {D<:LogNormal, DS<:eltype(D)}
     #details<< Implements estimation according to
     # Messica A(2016) A simple low-computation-intensity model for approximating
     # the distribution function of a sum of non-identical lognormals for
@@ -77,8 +72,8 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     n = length(μ)
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing.(storage))
-    skipmissings != Val(true) && nmissing != 0 && error(
-        "Found missing values. Use argument 'skipmissings = Val(true)' " *
+    !(typeof(ms) <: HandleMissingStrategy) && nmissing != 0 && error(
+        "Found missing values. Use argument 'SkipMissing()' " *
         "to sum over nonmissing.")
     # 0 in storage has the effect of not contributing to Ssum nor s 
     # For excluding terms of gapfilled records, must make 
@@ -109,32 +104,29 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
 end
 
 function sum(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric; 
+    corr::Symmetric, ms::MissingStrategy=PassMissing(); 
     isgapfilled::AbstractArray{Bool,1}=Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-       Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false)) where 
-    {D<:LogNormal, DS<:eltype(D), SM}
+       Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
+    {D<:LogNormal, DS<:eltype(D)}
     sum_lognormals(
-        dv, corr, isgapfilled=isgapfilled, storage = storage, 
-        skipmissings = skipmissings)
+        dv, corr, ms; isgapfilled=isgapfilled, storage = storage)
 end
 
 function sum_lognormals(dv::AbstractDistributionVector{D}, 
-    corr::Symmetric;
-    isgapfilled::AbstractArray{Bool,1} = Falses(length(dv)),
+    corr::Symmetric, ms::MissingStrategy=PassMissing();
+    isgapfilled::AbstractVector{Bool} = Falses(length(dv)),
     storage::AbstractVector{Union{Missing,DS}} = 
-        Vector{Union{Missing,eltype(D)}}(undef, length(dv)),
-    skipmissings::Val{SM} = Val(false)) where 
-    {D<:LogNormal,SM, DS<:eltype(D)}
+        Vector{Union{Missing,eltype(D)}}(undef, length(dv))) where 
+    {D<:LogNormal, DS<:eltype(D)}
     μ = params(dv, Val(1))
     σ = params(dv, Val(2))
     # storage = allowmissing(similar(μ))
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing, storage)
     anymissing = nmissing != 0
-    SM != true && anymissing && error(
-         "Found missing values. Use argument 'skipmissings = Val(true)' " *
+    !(typeof(ms) <: HandleMissingStrategy) && anymissing && error(
+         "Found missing values. Use argument 'SkipMissing()' " *
          "to sum over nonmissing.")
     Ssum::nonmissingtype(eltype(storage)) = sum(skipmissing(storage))
     # gapfilled records only used for Ssum, can set the to 0 now
@@ -155,13 +147,16 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     LogNormal(μ_sum, √σ2eff)  
 end
 
-mean(dv::AbstractDistributionVector{<:LogNormal}; kwargs...) =
-    mean_lognormals(dv; kwargs...)
-mean(dv::AbstractDistributionVector{<:LogNormal}, corr::Symmetric; kwargs...) =
-    mean_lognormals(dv, corr; kwargs...)
-mean(dv::AbstractDistributionVector{<:LogNormal}, acf::AutoCorrelationFunction; 
+mean(dv::AbstractDistributionVector{<:LogNormal}, 
+    ms::MissingStrategy=PassMissing(); kwargs...) =
+    mean_lognormals(dv, ms; kwargs...)
+mean(dv::AbstractDistributionVector{<:LogNormal}, corr::Symmetric, 
+    ms::MissingStrategy=PassMissing(); kwargs...) =
+    mean_lognormals(dv, corr, ms; kwargs...)
+mean(dv::AbstractDistributionVector{<:LogNormal}, acf::AutoCorrelationFunction, 
+    ms::MissingStrategy=PassMissing(); 
     kwargs...) =
-    mean_lognormals(dv, acf; kwargs...)
+    mean_lognormals(dv, acf, ms; kwargs...)
 
 function mean_lognormals(dv::AbstractDistributionVector{<:LogNormal}, x...; 
     kwargs...) 

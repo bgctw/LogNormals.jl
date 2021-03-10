@@ -1,16 +1,18 @@
 """
-    sum(dv::AbstractDistributionVector; <keyword arguments>)
-    sum(dv::AbstractDistributionVector, corr; <keyword arguments>)
-    sum(dv::AbstractDistributionVector, acf; <keyword arguments>)
+    sum(dv::AbstractDistributionVector, ms=PassMissing(); <keyword arguments>)
+    sum(dv::AbstractDistributionVector, corr, ms=PassMissing(); <keyword arguments>)
+    sum(dv::AbstractDistributionVector, acf, ms=PassMissing(); <keyword arguments>)
     
-    mean(dv::AbstractDistributionVector; <keyword arguments>)
-    mean(dv::AbstractDistributionVector, corr; <keyword arguments>)
-    mean(dv::AbstractDistributionVector, acf; <keyword arguments>)
+    mean(dv::AbstractDistributionVector, ms=PassMissing(); <keyword arguments>)
+    mean(dv::AbstractDistributionVector, corr, ms=PassMissing(); <keyword arguments>)
+    mean(dv::AbstractDistributionVector, acf, ms=PassMissing(); <keyword arguments>)
 
 Compute the distribution of the sum or mean of correlated random variables.
 
 # Arguments
 - `dv`: The vector of distributions, see [`AbstractDistributionVector`](@ref)
+- `ms`: [`MissingStrategy`]: set to `SkipMissing()` to consciously care
+  for missing values in `dv`.
 
 An optional second arguments supports correlation between random variables.
 - `corr::Symmetric`: correlation matrix, or
@@ -18,7 +20,6 @@ An optional second arguments supports correlation between random variables.
    [`AutoCorrelationFunction`](@ref)
 
 Keyword arguments:
-- `skipmissings`: Set to `Val(true)` to conciously care for missings in dv. 
 - `isgapfilled::AbstractVector{Bool}`: set to true for records that should
    contribute to the sum but not to the decrease of relative uncertainty
    with increasing number of records, e.g. for missing records that have
