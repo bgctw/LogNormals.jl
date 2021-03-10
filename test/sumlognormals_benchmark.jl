@@ -37,7 +37,7 @@ function benchmarkSums()
     #     @. S = exp(μ + abs2(σ)/2)
     #     nmissing = count(ismissing, S)
     #     anymissing = nmissing != 0
-    #     !(typeof(ms) <: HandleMissingStrategy) && anymissing && error(
+    #     !(isa(ms, HandleMissingStrategy)) && anymissing && error(
     #          "Found missing values. Use argument 'SkipMmissing()' to sum over nonmissing.")
     #     Ssum::nonmissingtype(eltype(S)) = sum(skipmissing(S))
     #     @. S = σ * S  # do only after Ssum

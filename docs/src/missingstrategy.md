@@ -32,10 +32,10 @@ It assumes that the errors ``\epsilon_i`` from
 ```julia
 # acf: coefficients of the autocorrelation functions starting from lag 0 
 function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
-    ms == PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
+    ms === PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
-    if ms == ExactMissing() && (Missing <: eltype(x))
+    if ms === ExactMissing() && (Missing <: eltype(x))
         # count the number of pairs with missings for each lag
         mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)
         nf = n - count(ismissing.(x))

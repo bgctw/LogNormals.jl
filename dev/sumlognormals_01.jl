@@ -1,6 +1,6 @@
 function sum_lognormals!(S, μ, σ, corr::AbstractMatrix, ms::MissingStrategy=PassMissing(); 
     corrlength = length(μ)-1)
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         any(ismissing.(corr)) && error("cannot skip missings in correlation matrix")
         ismiss = ismissing.(μ) .| ismissing.(σ) 
         #.| vec(mapslices((x -> any(ismissing(x))), corr; dims = 1))
@@ -38,7 +38,7 @@ function sum_lognormals(μ, σ, corr::AbstractMatrix, ms::MissingStrategy=PassMi
 end
 
 function sum_lognormals(μ, σ, ms::MissingStrategy=PassMissing())
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         ismiss = ismissing.(μ) .| ismissing.(σ)
         if any(ismiss) 
             μ = @view μ[.!ismiss]
@@ -61,7 +61,7 @@ function sum_lognormals(μ, σ, ms::MissingStrategy=PassMissing())
 end
 
 function length_itr(x)
-    typeof(Base.IteratorSize(x)) <: Union{Base.HasShape, Base.HasLength} && 
+    Base.IteratorSize(x) isa Union{Base.HasShape, Base.HasLength} && 
         return(length(x))
     count(x -> true, x)
 end
@@ -86,7 +86,7 @@ end
 function sum_lognormals!(S, ds, corr::AbstractMatrix, ms::MissingStrategy=PassMissing(); 
     corrlength = length(ds)-1)
     nterm = length_itr(ds) 
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         any(ismissing.(corr)) && error("cannot skip missings in correlation matrix")
         ifin = findall(.!ismissing.(ds))
         #.| vec(mapslices((x -> any(ismissing(x))), corr; dims = 1))

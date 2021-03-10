@@ -3,7 +3,7 @@ function sum(dv::AbstractDistributionVector{<:Normal}, ms::MissingStrategy=PassM
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         # need to allocate anyway with subsetting
         nonmissing = findall(.!ismissing.(dv))
         if !isempty(nonmissing) 
@@ -61,7 +61,7 @@ function sum_normals(dv::AbstractDistributionVector{D},
     σ = params(dv, Val(2))
     # var_sum (s) is the sum across all Sigma, i.e. σT * corr * σ
     # missings and gapfilled values do not count -> set to zero
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         # check on missings in dv, σ may have more finite values
         @. storage = ifelse(ismissing(dv), zero(DS), σ) #coalesce(σ, zero(DS))  
         Spure = disallowmissing(storage) 

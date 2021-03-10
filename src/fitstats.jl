@@ -67,7 +67,7 @@ moments(Normal())  # mean and variance
 ```
 """
 function moments(d::Distribution, ::Val{N} = Val(2)) where N 
-    typeof(N) <: Integer || error("N must be a positive Integer")
+    N isa Integer || error("N must be a positive Integer")
     N > 4 && error("Getting moments above 4 not yet implemented for " * 
         "distribution $(typeof(d)).")
     N == 4 && return(Moments(mean(d), var(d), skewness(d), kurtosis(d)))

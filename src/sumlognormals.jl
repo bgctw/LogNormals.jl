@@ -3,7 +3,7 @@ function sum(dv::AbstractDistributionVector{<:LogNormal}, ms::MissingStrategy=Pa
     length(dv) == length(isgapfilled) || error(
         "argument gapfilled must have the same length as dv ($(length(dv))" *
         "but was $(length(isgapfilled)).")
-    if typeof(ms) <: HandleMissingStrategy
+    if isa(ms, HandleMissingStrategy)
         nonmissing = findall(.!ismissing.(dv))
         #return( dv[nonmissing], isgapfilled[nonmissing])
         if !isempty(nonmissing) 
@@ -72,7 +72,7 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     n = length(μ)
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing.(storage))
-    !(typeof(ms) <: HandleMissingStrategy) && nmissing != 0 && error(
+    !(isa(ms, HandleMissingStrategy)) && nmissing != 0 && error(
         "Found missing values. Use argument 'SkipMissing()' " *
         "to sum over nonmissing.")
     # 0 in storage has the effect of not contributing to Ssum nor s 
@@ -125,7 +125,7 @@ function sum_lognormals(dv::AbstractDistributionVector{D},
     @. storage = exp(μ + abs2(σ)/2)
     nmissing = count(ismissing, storage)
     anymissing = nmissing != 0
-    !(typeof(ms) <: HandleMissingStrategy) && anymissing && error(
+    !(isa(ms, HandleMissingStrategy)) && anymissing && error(
          "Found missing values. Use argument 'SkipMissing()' " *
          "to sum over nonmissing.")
     Ssum::nonmissingtype(eltype(storage)) = sum(skipmissing(storage))

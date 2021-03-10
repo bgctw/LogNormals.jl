@@ -53,17 +53,17 @@ function autocor(x::AbstractVector{Union{Missing,T}},
 end,
 function autocor(x::AbstractVector{Union{Missing,T}}, 
     lags::AbstractVector{<:Integer},
-    ms::MS=PassMissing(); demean::Bool=true, kwargs... ) where 
-    {T<:Real,MS<:MissingStrategy}
+    ms::MissingStrategy=PassMissing(); demean::Bool=true, kwargs... ) where 
+    {T<:Real}
     # if not inheriting from missing, use the StatsBase standard
     !(Missing <: eltype(x)) && return(autocor(x, lags; demean=demean, kwargs...))
-    MS == PassMissing && any(ismissing.(x)) && return(missing)
+    ms === PassMissing() && any(ismissing.(x)) && return(missing)
     # only set to zero after demeaning, otherwise correlation estimates increase
     z::Vector{Union{Missing,T}} = demean ? x .- mean(skipmissing(x)) : x
     # replace missing by zero: new type will not match signature of current function 
     zpure = coalesce.(z, zero(z))::Vector{T} 
     acf = autocor(zpure,lags;demean=false,kwargs...)
-    MS != ExactMissing && return(acf)
+    ms !== ExactMissing() && return(acf)
     # correct for sum has been devided by a larger number of terms
     # (including terms of missing/0) 
     lx = length(x)
@@ -136,14 +136,14 @@ Estimate the standard error of the mean of an autocorrelated series:
 - `neff`: may provide a precomputed number of observations for efficiency.
 """
 function sem_cor(x, ms::MissingStrategy=PassMissing(); kwargs...) 
-    sx = typeof(ms) <: HandleMissingStrategy ? std(skipmissing(x)) : std(x)::eltype(x)
+    sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
     ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
     #!(Missing <: eltype(x)) && return(sem_cor(x, autocor_effective(x)))
     acfe = autocor_effective(x, ms; kwargs...)
     sem_cor(x, acfe, ms)
 end,
 function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
-    sx = typeof(ms) <: HandleMissingStrategy ? std(skipmissing(x)) : std(x)::eltype(x)
+    sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
     ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
     #length(x) <= 1 && return(sx)
     if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
@@ -175,13 +175,13 @@ Var(x) = \frac{n_{eff}}{n (n_{eff}-1)} \sum \left( x_i - \bar{x} \right)^2
 - `neff`: may provide a precomputed number of observations for efficiency.
 """
 function var_cor(x, ms::MissingStrategy=PassMissing(); neff=nothing) 
-    varx = typeof(ms) <: HandleMissingStrategy ? var(skipmissing(x)) : var(x)::eltype(x)
+    varx = isa(ms, HandleMissingStrategy) ? var(skipmissing(x)) : var(x)::eltype(x)
     ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
     acf = autocor(x, ms)
     var_cor(x, autocor_effective(x, acf), ms)
 end,
 function var_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
-    varx = typeof(ms) <: HandleMissingStrategy ? var(skipmissing(x)) : var(x)::eltype(x)
+    varx = isa(ms, HandleMissingStrategy) ? var(skipmissing(x)) : var(x)::eltype(x)
     ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
     n = length(x)
     nmiss = count(ismissing.(x))
@@ -254,10 +254,10 @@ function effective_n_cor(x, ms::MissingStrategy=PassMissing())
 end,
 function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
     # Zieba 2001 eq.(3)
-    ms == PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
+    ms === PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
-    if ms == ExactMissing() && (Missing <: eltype(x))
+    if ms === ExactMissing() && (Missing <: eltype(x))
         # see derivation in sem_cor.md
         # count the number of pairs with missings for each lag
         mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)

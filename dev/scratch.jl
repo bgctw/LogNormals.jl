@@ -19,13 +19,6 @@ julia> five = plusTwo(3)
 """
 plusTwo(x) = return x+2
 
-# function length_itr(x)
-#     typeof(Base.IteratorSize(x)) <: Union{Base.HasShape, Base.HasLength} && 
-#         return(length(x))
-#     count(x -> true, x)
-# end
-
-
 M = Moments(3)
 
 a = [1,2]
@@ -233,4 +226,25 @@ end
 @code_llvm f2(skip=true)
 @code_llvm f2(skip=false)
 
+using OnlineStats
+nsum = 1000
+probgap = 0.6
+acf0 = [1,0.4,0.1]
+Sigma = cormatrix_for_acf(nsum, acf0);
+Random.seed!(1234)
+dmn = MvNormal(ones(nsum), Symmetric(Sigma));
+#always use the same gaps
+igap = sample(1:nsum,trunc(Int,nsum*probgap), replace=false)
+b = rand(dmn)
+bm = allowmissing(b);
+bm[igap] .= missing;
+#autocor(bm, 0:4, ExactMissing())
+#autocor(bm[.!ismissing.(bm)], 0:4, ExactMissing())
+autocor(fit!(AutoCov(4), b))
+om = fit!(FTSeries(AutoCov(4); filter=!ismissing), bm)
+autocor(first(om.stats)) # wrong, since distances between records changed
+
+
+ms = SkipMissing()
+isa(ms, HandleMissingStrategy)
 

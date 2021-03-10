@@ -40,7 +40,7 @@ function boot_sem_cor()
         σ2uncorr = var(skipmissing(x))
         # BLUE Var(x) for correlated: Zieba11 eq.(1) 
         σ2 = σ2uncorr*(nfin-1)*neff/(nfin*(neff-1))
-        if ms == ExactMissing() && (nmiss != 0)
+        if ms === ExactMissing() && (nmiss != 0)
             σ = Fill(√σ2, n)
             dv = ParamDistributionVector(Normal{nonmissingtype(eltype(x))}, x, σ)
             acfes = n < length(acfe) ? view(acfe,1:n) : acfe
