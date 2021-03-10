@@ -221,7 +221,7 @@ used autocorrelation function (``n-1`` if not estimated from the data)
 - `x`: An iterator of a series of observations.
 - `ms`: [`MissingStrategy`](@ref): set to `ExcetMissing()` to consciously
   handle missing value in `x`.
-- `acf`: AutocorrelationFunction starting from lag 0.
+- `acf`: AutocorrelationFunction starting from lag 0
 
 # Details
 Missing values are not handled by default, i.e. the number of effective
@@ -256,17 +256,14 @@ function effective_n_cor(x, ms::MissingStrategy=PassMissing())
 end,
 function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
     # Zieba 2001 eq.(3)
-    n = length(x)
     ms == PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
+    n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
     if ms == ExactMissing() && (Missing <: eltype(x))
         # see derivation in sem_cor.md
-        # number of missing combinations due to missing in x
-        #only julia 1.6 (m0, mk...) = count_forlags(ismissing,x,0:length(k))
-        mka = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, 0:length(k))
-        m0 = mka[1]
-        mk = mka[2:end]
-        nf = n - m0
+        # count the number of pairs with missings for each lag
+        mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)
+        nf = n - count(ismissing.(x))
         neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
     else
         neff = n/(1 + 2/n*sum((n .- k) .* acf[k.+1]))  
