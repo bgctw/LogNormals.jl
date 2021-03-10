@@ -4,7 +4,7 @@
 Suptertype of Abstract and Singleton Types that signify how a method should deal with
 missing values
 - └`PassMissing`: Singleton: return missing, if a missing value is encountered
-- └`HanldeMissingStragety`: Abstract type: take missing values explicitly into account
+- └`HandleMissingStrategy`: Abstract type: take missing values explicitly into account
   - └`SkipMissing`: ignore missing values
   - └`ExactMissing`: unbiased processing 
 """

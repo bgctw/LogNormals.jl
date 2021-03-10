@@ -202,8 +202,8 @@ function early_var_return(x, varx=var(x))
 end
 
 @doc raw"""
-    effective_n_cor(x, ms::MissingStrategy=ExactMissing()) 
-    effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=ExactMissing())
+    effective_n_cor(x, ms::MissingStrategy=PassMissing()) 
+    effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
 
 Compute the number of effective observations for an autocorrelated series.
 
@@ -218,13 +218,20 @@ used autocorrelation function (``n-1`` if not estimated from the data)
 ``m_k`` is the number of pairs that contain a missing value for lag ``k``.
 
 # Arguments
-- `x`: An iterator of a series of observations
-- `ms`: [`MissingStrategy`](@ref): set to `SkipMissing()` to speed up computation 
-  (omitting [`count_forlags`](@ref) missing pairs) 
-  but get a positively biased
-  result with increasing bias with the number of missings. 
-  This leads to a subsequent underestimated uncertainty of the sum or the mean.
-- `acf`: AutocorrelationFunction starting from lag 0
+- `x`: An iterator of a series of observations.
+- `ms`: [`MissingStrategy`](@ref): set to `ExcetMissing()` to consciously
+  handle missing value in `x`.
+- `acf`: AutocorrelationFunction starting from lag 0.
+
+# Details
+Missing values are not handled by default, i.e. the number of effective
+observations is missing if ther any missings in `x`. 
+The recommended way is using `ExactMissing()`. 
+Alternatively, se to  `SkipMissing()` to speed up computation 
+(by omitting [`count_forlags`](@ref) missing pairs) 
+at the cost of a positively biased
+result with increasing bias with the number of missings. 
+The latter leads to a subsequent underestimated uncertainty of the sum or the mean.
 
 # Examples
 ```jldoctest; output = false, setup = :(using LogNormals, Distributions, LinearAlgebra, Missings)
@@ -234,7 +241,7 @@ Sigma = cormatrix_for_acf(100, acf0);
 dmn = MvNormal(ones(100), Symmetric(Sigma));
 x = allowmissing(rand(dmn));    
 x[11:20] .= missing
-neff = effective_n_cor(x, acf0)
+neff = effective_n_cor(x, acf0, ExactMissing())
 neff < 90
 neff_biased = effective_n_cor(x, acf0, SkipMissing())
 neff_biased > neff
@@ -242,12 +249,15 @@ neff_biased > neff
 true
 ```
 """
-function effective_n_cor(x, ms::MissingStrategy=ExactMissing())
-    effective_n_cor(x, autocor(x,ms), ms)
+function effective_n_cor(x, ms::MissingStrategy=PassMissing())
+    acf = autocor(x,ms)
+    ismissing(acf) && return(missing)
+    effective_n_cor(x, acf, ms)
 end,
-function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=ExactMissing())
+function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
     # Zieba 2001 eq.(3)
     n = length(x)
+    ms == PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
     if ms == ExactMissing() && (Missing <: eltype(x))
         # see derivation in sem_cor.md

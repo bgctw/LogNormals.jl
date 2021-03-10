@@ -74,18 +74,20 @@ using Unitful
         neff = @inferred effective_n_cor(a, acf0)
         @test neff < length(a)
         @test neff ≈ 50.30 atol=0.01 # regression test
-        neffm = @inferred effective_n_cor(am, acf0)
+        ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
+        neffm = @inferred effective_n_cor(am, acf0, ExactMissing())
         @test neffm < neff
         @test neffm ≈ 49.61 atol=0.01 # regression test
         # n smaller than length(acf):
         neff2 = @inferred effective_n_cor(a[1:2], [acf0..., 0.05, 0.05])
         @test neff2 ≈ 1.43 atol=0.01 # regression test
         # no correlation estimate for lag 3
-        neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05])
+        neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05], ExactMissing())
         @test neff3 ≈ 1.43 atol=0.01 # regression test
         # without specifying acf
-        neff = @inferred effective_n_cor(am)
-        @test neff == effective_n_cor(am, autocor(am, ExactMissing()))
+        ismissing(@inferred(Float64,effective_n_cor(am)))
+        neff = @inferred effective_n_cor(am, ExactMissing())
+        @test neff == effective_n_cor(am, autocor(am, ExactMissing()), ExactMissing())
     end;
     @testset "var_cor" begin
         va1 = @inferred var_cor(a, acf0, ExactMissing())
