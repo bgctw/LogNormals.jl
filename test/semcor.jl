@@ -1,6 +1,7 @@
 using LogNormals
-using Test, Distributions, LinearAlgebra, StatsBase, Missings, Random
-using OffsetArrays, RecursiveArrayTools
+using Test, Distributions, StatsBase, Missings, MissingStrategies, Random
+using OffsetArrays, RecursiveArrayTools, LinearAlgebra
+using DistributionVectors
 using Unitful
 
 @testset "sem_cor" begin

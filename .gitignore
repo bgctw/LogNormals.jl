@@ -3,3 +3,4 @@ dev/*.mem
 src/*.mem
 test/*.mem
 statprof/*
+test/Manifest.toml

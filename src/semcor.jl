@@ -34,7 +34,7 @@ Estimate the autocorrelation function accounting for missing values.
 # Arguments
 - `x`: series, which may contain missing values
 - `lags`: Integer vector of the lags for which correlation should be computed
-- `ms`: [`MissingStrategy`](@ref). If `ExactMissing()` then divide the sum
+- `ms`: `MissingStrategy`. If `ExactMissing()` then divide the sum
    in the formula of the exepected value in the formula for the correlation
    at lag `k` by `n - nmissing` instead of `n`, 
    where `nimissing` is the number of records where there is a missing either
@@ -92,7 +92,7 @@ Estimate the effective autocorrelation function for series x.
 
 # Arguments
 - `x`: An iterator of a series of observations
-- `ms`: [`MissingStrategy`](@ref) passed to [`autocor`](@ref)
+- `ms`: `MissingStrategy` passed to [`autocor`](@ref)
 - `acf`: AutocorrelationFunction starting from lag 0
 
 # Notes
@@ -127,7 +127,7 @@ Estimate the standard error of the mean of an autocorrelated series:
 # Arguments
 - `x`: An iterator of a series of observations
 - `acf`: AutocorrelationFunction starting from lag 0. 
-- `ms`: [`MissingStrategy`](@ref) passed to [`effective_n_cor`](@ref).
+- `ms`: `MissingStrategy` passed to [`effective_n_cor`](@ref).
   Value of `SkipMissing()` speeds up computation compared to `ExactMissing()`,
   but leads to a negatively biased result with absolute value of the bias 
   increasing with the number of missings.
@@ -166,7 +166,7 @@ Var(x) = \frac{n_{eff}}{n (n_{eff}-1)} \sum \left( x_i - \bar{x} \right)^2
 # Arguments
 - `x`: An iterator of a series of observations
 - `acf`: AutocorrelationFunction starting from lag 0. 
-- `ms`: [`MissingStrategy`](@ref) passed to [`effective_n_cor`](@ref).
+- `ms`: `MissingStrategy` passed to [`effective_n_cor`](@ref).
   Value of `SkipMissing()` speeds up computation compared to `ExactMissing()`,
   but leads to a negatively biased result with absolute value of the bias 
   increasing with the number of missings.
@@ -217,7 +217,7 @@ used autocorrelation function (``n-1`` if not estimated from the data)
 
 # Arguments
 - `x`: An iterator of a series of observations.
-- `ms`: [`MissingStrategy`](@ref): set to `ExcetMissing()` to consciously
+- `ms`: `MissingStrategy`: set to `ExcetMissing()` to consciously
   handle missing value in `x`.
 - `acf`: AutocorrelationFunction starting from lag 0
 
@@ -232,7 +232,8 @@ result with increasing bias with the number of missings.
 The latter leads to a subsequent underestimated uncertainty of the sum or the mean.
 
 # Examples
-```jldoctest; output = false, setup = :(using LogNormals, Distributions, LinearAlgebra, Missings)
+```jldoctest; output = false, setup = :(using LogNormals)
+using Distributions, DistributionVectors, Missings, MissingStrategies, LinearAlgebra
 acf0 = [1,0.4,0.1]
 Sigma = cormatrix_for_acf(100, acf0);
 # 100 random variables each Normal(1,1)

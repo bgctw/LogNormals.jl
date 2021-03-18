@@ -1,6 +1,9 @@
 [deps]
+DistributionVectors = "876525fa-7cae-420f-8fd8-59a6b63fe7c3"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+LogNormals = "b68ae993-0436-406f-90b1-cda2b8f6e45f"
+MissingStrategies = "e455a6d6-8373-11eb-38a5-df3e63e3f6fc"
 Missings = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"

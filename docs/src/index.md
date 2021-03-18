@@ -7,9 +7,7 @@
 ```
 
 ```@contents
-Pages = ["lognormalprops.md", "fitstats.md", "distributionvector.md", 
-"sumdist.md", "sumnormals.md","sumlognormals.md",
-"missingstrategy.md", "semcor.md"]
+Pages = ["lognormalprops.md", "fitstats.md", "semcor.md"]
 Depth = 2
 ```
 

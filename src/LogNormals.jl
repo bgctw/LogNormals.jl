@@ -7,30 +7,22 @@ Tools that help using the LogNormal distribution.
 module LogNormals
 
 export AbstractMoments, Moments, n_moments, moments,
-    QuantilePoint, Σstar, σstar, 
+    QuantilePoint, 
     fit_mean_quantile, fit_mode_quantile, fit_median_quantile,
     @qp, @qp_ll, @qp_l, @qp_m, @qp_u, @qp_uu, 
     @qs_cf90, @qs_cf95,
-    AbstractDistributionVector, SimpleDistributionVector, ParamDistributionVector,
-    AutoCorrelationFunction,
-    sum_lognormals, 
-    sum_normals,
-    cormatrix_for_acf,
-    vectuptotupvec,
-    autocor_effective, effective_n_cor, count_for_lag, count_forlags, sem_cor, var_cor,
-    MissingStrategy, HandleMissingStrategy, PassMissing, SkipMissing, ExactMissing
+    Σstar, σstar, 
+    autocor_effective, effective_n_cor, count_for_lag, count_forlags, sem_cor, var_cor
 
 import Random: rand, rand!
 import Base: sum, size
 import Statistics: mean
 import StatsBase: coef, autocor
 
-using StatsBase, Distributions, StaticArrays, LinearAlgebra, Missings
+using StatsBase, Distributions, Missings, MissingStrategies
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays, OffsetArrays
+using StaticArrays, LinearAlgebra
 using Random
-
-# MissingStrategy
-include("missingstrategy.jl")
 
 # general fitting to statistics
 include("fitstats.jl")
@@ -43,18 +35,6 @@ include("normal.jl")
 
 # logitnormal fitting
 include("logitnormal.jl")
-
-# SimpleDistributionVector type
-include("distributionvector.jl")
-
-# types and method docu for sum of distributions
-include("sumdistributionvector.jl")
-
-# sum of normal random variables
-include("sumnormals.jl")
-
-# sum of lognormal random variables
-include("sumlognormals.jl")
 
 # standard error of the mean of correlated normal variables
 include("semcor.jl")

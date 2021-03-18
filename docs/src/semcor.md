@@ -52,7 +52,7 @@ autocor_effective(x, acf::AbstractVector)
 ## Autocorrelation of a series with missing values
 ```@docs
 autocor(x::AbstractVector{Union{Missing,T}}, 
-    ms::MissingStrategy=PassMissing(); kwargs... ) where {T<:Real}
+    ms::MissingStrategy; kwargs... ) where {T<:Real}
 ```
 
 ```@docs

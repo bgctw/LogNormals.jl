@@ -33,6 +33,12 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      - run: |
+          # register RegistryTw julia registry
+          julia -e '
+          using Pkg;
+          Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaRegistries/General"));
+          Pkg.Registry.add(RegistrySpec(url = "https://github.com/bgctw/RegistryTw.git"))'
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
@@ -58,15 +64,22 @@ jobs:
         with:
           version: '1'
       - run: |
+          # register RegistryTw julia registry
+          julia -e '
+          using Pkg;
+          Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaRegistries/General"));
+          Pkg.Registry.add(RegistrySpec(url = "https://github.com/bgctw/RegistryTw.git"))'
+      - run: |
           julia --project=docs -e '
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
       - run: |
           julia --project=docs -e '
-            using Documenter: doctest
+            using Documenter: doctest, DocMeta
             using LogNormals     # change LogNormals to the name of your package
-            doctest(LogNormals)' # change LogNormals to the name of your package
+            DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using LogNormals); recursive=true)
+            doctest(LogNormals)' 
       - run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,6 +1,8 @@
 [deps]
+DistributionVectors = "876525fa-7cae-420f-8fd8-59a6b63fe7c3"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MissingStrategies = "e455a6d6-8373-11eb-38a5-df3e63e3f6fc"
 Missings = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"

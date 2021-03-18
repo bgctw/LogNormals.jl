@@ -6,15 +6,11 @@ push!(LOAD_PATH,"../src/")
 #DocMeta.setdocmeta!(LogNormals, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
 #DocMeta.setdocmeta!(Distributions, :DocTestSetup, :(using Statistics,Distributions,LogNormals); recursive=true)
 makedocs(sitename="LogNormals.jl",
+         doctest=false,
          pages = [
             "Home" => "index.md",
             "LogNormal properties" => "lognormalprops.md",
             "Fit to statistic" => "fitstats.md",
-            "Vector of random variables" => "distributionvector.md",
-            "Sum of random variables" => "sumdist.md",
-            "Sum Normals" => "sumnormals.md",
-            "Sum LogNormals" => "sumlognormals.md",
-            "Strategies for missings" => "missingstrategy.md",
             "sem correlated" => "semcor.md",
          ],
          modules = [LogNormals],
