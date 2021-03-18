@@ -123,7 +123,7 @@ Estimate the effective autocorrelation function for series x.
   of autocorrelation function (see [`autocor`](@ref)).
 """
 function autocor_effective(x, ms::MissingStrategy=PassMissing()) 
-    autocor_effective(x, autocor(x, ms))
+    autocor_effective(x, @returnmissing autocor(x, ms))
 end,
 function autocor_effective(x, acf::AbstractVector)
     #maybe implement a more efficient version that computes only the
@@ -204,23 +204,34 @@ Var(x) = \frac{n_{eff}}{n (n_{eff}-1)} \sum \left( x_i - \bar{x} \right)^2
 # Optional Arguments
 - `neff`: may provide a precomputed number of observations for efficiency.
 """
-function var_cor(x, ms::MissingStrategy=PassMissing(); neff=nothing) 
-    varx = isa(ms, HandleMissingStrategy) ? var(skipmissing(x)) : var(x)::eltype(x)
-    ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
-    acf = autocor(x, ms)
-    var_cor(x, autocor_effective(x, acf), ms)
+function var_cor(x, ms::MissingStrategy=PassMissing(); kwargs...)
+    acfe = autocor_effective(x, ms)
+    ismissing(acfe) && return missing
+    var_cor(x, acfe, ms; kwargs...)
 end,
-function var_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
-    varx = isa(ms, HandleMissingStrategy) ? var(skipmissing(x)) : var(x)::eltype(x)
-    ea = early_var_return(x, varx); isnothing(ea) || return(something(ea))
+function var_cor(x, acfe::AbstractVector; kwargs...)
+    var_cor(x, acfe, PassMissing(); kwargs...)
+end
+function var_cor(x, acfe::AbstractVector, ms::PassMissing; neff=nothing)
+    isnothing(neff) && (neff = effective_n_cor(x, acfe, ms));
+    ismissing(neff) && return missing
+    var_cor_neff(var(x)::nonmissingtype(eltype(x)),neff,length(x))
+end,
+function var_cor(x, acfe::AbstractVector, ms::HandleMissingStrategy; neff=nothing)
+    isnothing(neff) && (neff = effective_n_cor(x, acfe, ms));
+    ismissing(neff) && error(
+        "expected finite effective_n_cor with HandleMissingStrategy" * 
+        "but got missing.")
     n = length(x)
     nmiss = count(ismissing.(x))
     nfin = n - nmiss
-    if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
-    σ2uncorr = var(skipmissing(x))
-    # BLUE Var(x) for correlated: Zieba11 eq.(1) 
-    σ2 = σ2uncorr*(nfin-1)*neff/(nfin*(neff-1))
+    var_cor_neff(var(skipmissing(x))::nonmissingtype(eltype(x)),neff,nfin)
 end
+function var_cor_neff(varx, neff, nfin)
+    # BLUE Var(x) for correlated: Zieba11 eq.(1) 
+    σ2 = varx*(nfin-1)*neff/(nfin*(neff-1))
+end
+
 
 function early_var_return(x, varx=var(x))
     ismissing(varx) && return(missing)
@@ -328,7 +339,6 @@ end
     neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
 end
 function effective_n_cor_neglectmissing(x, acf::AbstractVector) 
-    @show typeof(x)
     #Missing <: eltype(x) && error("assumes x without missing. Use effective_ncor(..., ExcactMissing()")
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0

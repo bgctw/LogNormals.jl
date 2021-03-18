@@ -107,9 +107,10 @@ using Unitful
         va1 = @inferred var_cor(a, acf0, ExactMissing())
         va2 = @inferred var_cor(a, acf0, PassMissing())
         va = @inferred var_cor(a, acf0)
-        @test va == va1 == va2
+        # slight differences between var(x) and var(skipmissing(x))
+        @test va ≈ va1 ≈ va2 
         # need to specify handling of missing otherwise get missing back
-        ismissing(@inferred(Float64,var_cor(am, acf0)))
+        @test ismissing(@inferred(Float64,var_cor(am, acf0)))
         vam = @inferred var_cor(am, acf0, ExactMissing())
         #@code_warntype var_cor(am, acf0, ms=ExactMissing(); neff=nothing)
         @test isnan(var_cor(am[[3]],acf0, ExactMissing()))
@@ -120,6 +121,11 @@ using Unitful
         # not correcting neff for missings overestimates neff
         # and hence underestimates uncertainty
         @test vamf < vam
+        # calling without acf
+        @test @inferred var_cor(a) > 0
+        @test ismissing(@inferred(var_cor(am)))
+        @test ismissing(@inferred(var_cor(am, PassMissing())))
+        @test @inferred(var_cor(am, ExactMissing())) > 0
     end;
     @testset "semcor with same effective acf" begin
         se_a = @inferred sem_cor(a, acf0)
