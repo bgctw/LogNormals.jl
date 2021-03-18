@@ -1,7 +1,7 @@
 using LogNormals
 using Test, Distributions, StatsBase, Missings, MissingStrategies, Random
 using OffsetArrays, RecursiveArrayTools, LinearAlgebra
-using DistributionVectors
+using DistributionVectors # cormatri_for_acf
 using Unitful
 
 @testset "sem_cor" begin
@@ -75,7 +75,12 @@ using Unitful
         neff = @inferred effective_n_cor(a, acf0)
         @test neff < length(a)
         @test neff ≈ 50.30 atol=0.01 # regression test
-        ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
+        # call with MissingStrategy but nonmissing type
+        neffs = @inferred effective_n_cor(a, acf0, ExactMissing())
+        @test neffs == neff
+        #
+        @test ismissing(@inferred(Missing,effective_n_cor(am, acf0, PassMissing())))
+        # TODO ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
         neffm = @inferred effective_n_cor(am, acf0, ExactMissing())
         @test neffm < neff
         @test neffm ≈ 49.61 atol=0.01 # regression test
@@ -85,6 +90,7 @@ using Unitful
         # no correlation estimate for lag 3
         neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05], ExactMissing())
         @test neff3 ≈ 1.43 atol=0.01 # regression test
+        #
         # without specifying acf
         ismissing(@inferred(Float64,effective_n_cor(am)))
         neff = @inferred effective_n_cor(am, ExactMissing())
@@ -111,6 +117,8 @@ using Unitful
     @testset "semcor with same effective acf" begin
         se_a = @inferred sem_cor(a, acf0)
         ismissing(@inferred(Float64, sem_cor(am, acf0)))
+        @code_warntype sem_cor(am, acf0, PassMissing())
+        @edit sem_cor(am, acf0, PassMissing())
         se_am = @inferred sem_cor(am, acf0, ExactMissing())
         @test isnan(sem_cor(am[[3]],acf0, ExactMissing()))
         se_az = @inferred sem_cor(az, acf0)

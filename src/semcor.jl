@@ -142,13 +142,26 @@ function sem_cor(x, ms::MissingStrategy=PassMissing(); kwargs...)
     acfe = autocor_effective(x, ms; kwargs...)
     sem_cor(x, acfe, ms)
 end,
-function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
-    sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
+# function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
+#     sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
+#     ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
+#     #length(x) <= 1 && return(sx)
+#     if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
+#     #x, acfe, ms, neff
+#     σ2 = var_cor(x, acfe, ms; neff=neff)
+#     √(σ2/neff)
+# end
+@traitfn function sem_cor(x::::!(IsEltypeSuperOfMissing), acfe, ::MissingStrategy; neff=nothing)
     ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
-    #length(x) <= 1 && return(sx)
     if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
     σ2 = var_cor(x, acfe, ms; neff=neff)
     √(σ2/neff)
+end
+@traitfn function sem_cor(x::::IsEltypeSuperOfMissing, acfe, ms::PassMissing; neff=nothing)
+    any(ismissing.(x)) && return(missing)
+    x1nm = convert.(nonmissingtype(eltype(x)),x)
+    Missing <: typeof(x1nm) && error("could not convert to nonmissing type")
+    sem_cor(x1nm, acfe, ms; neff=neff)
 end
 
 @doc raw"""
@@ -205,6 +218,13 @@ end
 
 Compute the number of effective observations for an autocorrelated series.
 
+# Arguments
+- `x`: An iterator of a series of observations.
+- `ms`: `MissingStrategy`: If not given defaults to `PassMissing`. 
+  Set to `ExactMissing()` to consciouly handle missing value in `x`.
+- `acf`: AutocorrelationFunction starting from lag 0. 
+   If not given, defaults to `autocor(x, ms)` 
+
 The formula in Zieba has been extended for missing values:
 ```math
 n_{eff} = \frac{n_F}{1+{2 \over n_F} \sum_{k=1}^{min(n-1,n_k)} (n-k-m_k) \rho_k}
@@ -215,18 +235,12 @@ used autocorrelation function (``n-1`` if not estimated from the data)
 ,``\rho_k`` is the correlation, and 
 ``m_k`` is the number of pairs that contain a missing value for lag ``k``.
 
-# Arguments
-- `x`: An iterator of a series of observations.
-- `ms`: `MissingStrategy`: set to `ExcetMissing()` to consciously
-  handle missing value in `x`.
-- `acf`: AutocorrelationFunction starting from lag 0
-
 # Details
 Missing values are not handled by default, i.e. the number of effective
 observations is missing if ther any missings in `x`. 
 The recommended way is using `ExactMissing()`. 
 Alternatively, se to  `SkipMissing()` to speed up computation 
-(by omitting [`count_forlags`](@ref) missing pairs) 
+(by internally omitting [`count_forlags`](@ref) missing pairs) 
 at the cost of a positively biased
 result with increasing bias with the number of missings. 
 The latter leads to a subsequent underestimated uncertainty of the sum or the mean.
@@ -248,23 +262,52 @@ neff_biased > neff
 true
 ```
 """
-function effective_n_cor(x, ms::MissingStrategy=PassMissing())
+function effective_n_cor(x)
+    effective_n_cor(x, PassMissing())
+end,
+function effective_n_cor(x, ms::MissingStrategy)
     acf = autocor(x,ms)
     ismissing(acf) && return(missing)
     effective_n_cor(x, acf, ms)
 end,
-function effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy=PassMissing())
-    # Zieba 2001 eq.(3)
-    ms === PassMissing() && Missing <: eltype(x) && any(ismissing.(x)) && return(missing)
+function effective_n_cor(x, acf::AbstractVector) # do not care for missings in x
+    @show typeof(x)
+    #Missing <: eltype(x) && error("assumes x without missing. Use effective_ncor(..., ExcactMissing()")
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
-    if ms === ExactMissing() && (Missing <: eltype(x))
-        # see derivation in sem_cor.md
-        # count the number of pairs with missings for each lag
-        mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)
-        nf = n - count(ismissing.(x))
-        neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
-    else
-        neff = n/(1 + 2/n*sum((n .- k) .* acf[k.+1]))  
-    end
+    neff = n/(1 + 2/n*sum((n .- k) .* acf[k.+1]))  
 end
+function effective_n_cor(x::AbstractVector, ms::MissingStrategy) 
+    # need to repeat for ms,x for x::AbstractVector in order to solve method ambiguities
+    acf = autocor(x,ms)
+    ismissing(acf) && return(missing)
+    effective_n_cor(x, acf, ms)
+end
+@traitfn function effective_n_cor(x::::!(IsEltypeSuperOfMissing), acf::AbstractVector, ::MissingStrategy)
+    # for any MissingStrategy, if x is not of missing type call original
+    effective_n_cor(x, acf)  
+end
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::SkipMissing)
+    # also for SkipMissing call original with (with x of full length)
+    # which differs from effective_n_cor(skipmissing(x), acf)
+    effective_n_cor(x, acf)  
+end
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::PassMissing)
+    # return missing if there are any missings, otherwise call original
+    any(ismissing.(x)) && return missing
+    effective_n_cor(x, acf)  
+end
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::ExactMissing)
+    # Zieba 2001 eq.(3)
+    n = length(x)
+    k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
+    # see derivation in sem_cor.md
+    # count the number of pairs with missings for each lag
+    mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)
+    nf = n - count(ismissing.(x))
+    neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
+end
+
+
+
+
