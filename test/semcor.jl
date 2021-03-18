@@ -64,6 +64,13 @@ using Unitful
         @test acfem[5:end] ≈ acfez[5:end]
         # TODO after StatsBase.autocor can deal with unitful
         #acfemu = @inferred autocor((am.-meana).*u"m", lags; demean=false);
+        #
+        # variant without lags
+        ismissing(@inferred autocor(am))
+        ismissing(@inferred autocor(am, PassMissing()))
+        @test acfemf ≈ (@inferred autocor(am.-meana, SkipMissing(); demean=false))[1:9]
+        @test acfem ≈ (@inferred(autocor(am.-meana, ExactMissing(); demean=false)))[1:9]
+        #SimpleTraits.istrait(IsEltypeSuperOfMissing{typeof(am.-meana)})
     end;
     @testset "autocor_effective" begin
         effa = @inferred autocor_effective(a, acf0)

@@ -34,7 +34,8 @@ Estimate the autocorrelation function accounting for missing values.
 # Arguments
 - `x`: series, which may contain missing values
 - `lags`: Integer vector of the lags for which correlation should be computed
-- `ms`: `MissingStrategy`. If `ExactMissing()` then divide the sum
+- `ms`: `MissingStrategy`. Defaults to `PassMissing`. Set to `ExactMissing()` to
+    divide the sum
    in the formula of the exepected value in the formula for the correlation
    at lag `k` by `n - nmissing` instead of `n`, 
    where `nimissing` is the number of records where there is a missing either
@@ -47,21 +48,41 @@ Note that `StatsBase.autocor` uses devision by `n` instead of 'n-k', the
 true length of the vectors correlated at lag `k` resulting in 
 low-biased correlations of higher lags for numerical stability reasons.
 """
-function autocor(x::AbstractVector{Union{Missing,T}}, 
-    ms::MissingStrategy=PassMissing(); kwargs... ) where {T<:Real} 
-    autocor(x, StatsBase.default_autolags(size(x,1)), ms, kwargs...)
-end,
-function autocor(x::AbstractVector{Union{Missing,T}}, 
-    lags::AbstractVector{<:Integer},
-    ms::MissingStrategy=PassMissing(); demean::Bool=true, kwargs... ) where 
-    {T<:Real}
-    # if not inheriting from missing, use the StatsBase standard
-    !(Missing <: eltype(x)) && return(autocor(x, lags; demean=demean, kwargs...))
-    ms === PassMissing() && any(ismissing.(x)) && return(missing)
-    # only set to zero after demeaning, otherwise correlation estimates increase
-    z::Vector{Union{Missing,T}} = demean ? x .- mean(skipmissing(x)) : x
+(@traitfn autocor(x::::!(IsEltypeSuperOfMissing), 
+    ms::MissingStrategy; kwargs...) = autocor(x; kwargs...)),
+(@traitfn autocor(x::::!(IsEltypeSuperOfMissing), lags::AbstractVector{<:Integer}, 
+    ms::MissingStrategy, kwargs...) = autocor(x, lags; kwargs...))
+# non-Missing types supplied with missing strategy directly call original function
+#
+# missing types without MissingStrategy call the PassMissing() variant
+@traitfn function autocor(x::::IsEltypeSuperOfMissing; kwargs...)
+    autocor(x, PassMissing(), kwargs...)
+end
+@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer};
+    kwargs...)
+    autocor(x, lags, PassMissing(); kwargs...)
+end
+# if lags is not provided, call default_autolags
+@traitfn function autocor(x::::IsEltypeSuperOfMissing, ms::MissingStrategy; kwargs...)
+    autocor(x, StatsBase.default_autolags(size(x,1)), ms; kwargs...)
+end
+# Passmissing returs missing on any missing entry or converts argument types
+@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
+    ms::PassMissing; kwargs...)
+    any(ismissing.(x)) && return(missing)
+    xnm = convert.(nonmissingtype(eltype(x)),x)
+    SimpleTraits.istrait(IsEltypeSuperOfMissing(typeof(x1nm))) && error(
+        "could not convert to nonmissing")
+    autocor(xnm, lags; kwargs...)
+end
+# SkipMissing replaces missings by zero after demeaning.
+#   This underestimates both variance and covariances with varying effect on correlation
+# ExactMissing devides by a smaller number of terms
+@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
+    ms::HandleMissingStrategy; demean::Bool=true, kwargs...)
+    z::Vector{Union{Missing,eltype(x)}} = demean ? x .- mean(skipmissing(x)) : x
     # replace missing by zero: new type will not match signature of current function 
-    zpure = coalesce.(z, zero(z))::Vector{T} 
+    zpure = coalesce.(z, zero(z))::Vector{nonmissingtype(eltype(x))}
     acf = autocor(zpure,lags;demean=false,kwargs...)
     ms !== ExactMissing() && return(acf)
     # correct for sum has been devided by a larger number of terms
@@ -79,10 +100,6 @@ function autocor(x::AbstractVector{Union{Missing,T}},
     end
     acf
 end
-# accept MissingStrategy for methods with Missing not part of eltype
-autocor(x::StatsBase.RealVector, ms::MissingStrategy; kwargs...) = autocor(x; kwargs...)
-autocor(x::StatsBase.RealVector, lags::StatsBase.IntegerVector, ms::MissingStrategy; 
-    kwargs...) = autocor(x, lags; kwargs...)
 
 """
     autocor_effective(x, ms::MissingStrategy=PassMissing())
