@@ -1,5 +1,6 @@
 using Documenter
-using LogNormals, Distributions, StatsBase, StatsPlots
+using LogNormals
+using Distributions, StatsBase, StatsPlots, Missings, MissingStrategies
 
 push!(LOAD_PATH,"../src/")
 # need to add Statistics and Distributions to Project.toml in docs/
