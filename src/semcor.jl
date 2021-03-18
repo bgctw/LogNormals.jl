@@ -287,34 +287,37 @@ function effective_n_cor(x, ms::MissingStrategy)
     ismissing(acf) && return(missing)
     effective_n_cor(x, acf, ms)
 end,
-function effective_n_cor(x, acf::AbstractVector) # do not care for missings in x
-    @show typeof(x)
-    #Missing <: eltype(x) && error("assumes x without missing. Use effective_ncor(..., ExcactMissing()")
-    n = length(x)
-    k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
-    neff = n/(1 + 2/n*sum((n .- k) .* acf[k.+1]))  
-end
 function effective_n_cor(x::AbstractVector, ms::MissingStrategy) 
     # need to repeat for ms,x for x::AbstractVector in order to solve method ambiguities
     acf = autocor(x,ms)
     ismissing(acf) && return(missing)
     effective_n_cor(x, acf, ms)
 end
-@traitfn function effective_n_cor(x::::!(IsEltypeSuperOfMissing), acf::AbstractVector, ::MissingStrategy)
-    # for any MissingStrategy, if x is not of missing type call original
-    effective_n_cor(x, acf)  
+@traitfn function effective_n_cor(x::::!(IsEltypeSuperOfMissing), acf::AbstractVector) 
+    effective_n_cor_neglectmissing(x, acf)
 end
-@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::SkipMissing)
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector) 
+    effective_n_cor(x, acf, PassMissing())
+end
+@traitfn function effective_n_cor(x::::!(IsEltypeSuperOfMissing), acf::AbstractVector, 
+    ::MissingStrategy)
+    # for any MissingStrategy, if x is not of missing type call original
+    effective_n_cor_neglectmissing(x, acf)  
+end
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, 
+    ::SkipMissing)
     # also for SkipMissing call original with (with x of full length)
     # which differs from effective_n_cor(skipmissing(x), acf)
-    effective_n_cor(x, acf)  
+    effective_n_cor_neglectmissing(x, acf)  
 end
-@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::PassMissing)
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, 
+    ::PassMissing)
     # return missing if there are any missings, otherwise call original
     any(ismissing.(x)) && return missing
-    effective_n_cor(x, acf)  
+    effective_n_cor_neglectmissing(x, acf)  
 end
-@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, ::ExactMissing)
+@traitfn function effective_n_cor(x::::IsEltypeSuperOfMissing, acf::AbstractVector, 
+    ::ExactMissing)
     # Zieba 2001 eq.(3)
     n = length(x)
     k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
@@ -323,6 +326,13 @@ end
     mk = count_forlags((x_i,x_iplusk)->ismissing(x_i) || ismissing(x_iplusk), x, k)
     nf = n - count(ismissing.(x))
     neff = nf/(1 + 2/nf*sum((n .- k .-mk) .* acf[k.+1]))  
+end
+function effective_n_cor_neglectmissing(x, acf::AbstractVector) 
+    @show typeof(x)
+    #Missing <: eltype(x) && error("assumes x without missing. Use effective_ncor(..., ExcactMissing()")
+    n = length(x)
+    k = Base.OneTo(min(n,length(acf))-1) # acf starts with lag 0
+    neff = n/(1 + 2/n*sum((n .- k) .* acf[k.+1]))  
 end
 
 

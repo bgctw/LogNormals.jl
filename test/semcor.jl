@@ -87,7 +87,7 @@ using Unitful
         @test neffs == neff
         #
         @test ismissing(@inferred(Missing,effective_n_cor(am, acf0, PassMissing())))
-        # TODO ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
+        @test ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
         neffm = @inferred effective_n_cor(am, acf0, ExactMissing())
         @test neffm < neff
         @test neffm ≈ 49.61 atol=0.01 # regression test
