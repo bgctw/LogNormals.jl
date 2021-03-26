@@ -153,32 +153,14 @@ Estimate the standard error of the mean of an autocorrelated series:
 - `neff`: may provide a precomputed number of observations for efficiency.
 """
 function sem_cor(x, ms::MissingStrategy=PassMissing(); kwargs...) 
-    sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
-    ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
-    #!(Missing <: eltype(x)) && return(sem_cor(x, autocor_effective(x)))
-    acfe = autocor_effective(x, ms; kwargs...)
+    acfe = @returnmissing autocor_effective(x, ms; kwargs...)
     sem_cor(x, acfe, ms)
 end,
-# function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
-#     sx = isa(ms, HandleMissingStrategy) ? std(skipmissing(x)) : std(x)::eltype(x)
-#     ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
-#     #length(x) <= 1 && return(sx)
-#     if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
-#     #x, acfe, ms, neff
-#     σ2 = var_cor(x, acfe, ms; neff=neff)
-#     √(σ2/neff)
-# end
-@traitfn function sem_cor(x::::!(IsEltypeSuperOfMissing), acfe, ::MissingStrategy; neff=nothing)
-    ea = early_var_return(x, abs2(sx)); isnothing(ea) || return(something(ea))
+function sem_cor(x, acfe, ms::MissingStrategy=PassMissing(); neff=nothing)
+    # all the differences between missing-strategies already handled by effective_n_cor
     if isnothing(neff); neff = effective_n_cor(x, acfe, ms); end
     σ2 = var_cor(x, acfe, ms; neff=neff)
     √(σ2/neff)
-end
-@traitfn function sem_cor(x::::IsEltypeSuperOfMissing, acfe, ms::PassMissing; neff=nothing)
-    any(ismissing.(x)) && return(missing)
-    x1nm = convert.(nonmissingtype(eltype(x)),x)
-    Missing <: typeof(x1nm) && error("could not convert to nonmissing type")
-    sem_cor(x1nm, acfe, ms; neff=neff)
 end
 
 @doc raw"""

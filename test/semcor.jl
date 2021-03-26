@@ -129,9 +129,8 @@ using Unitful
     end;
     @testset "semcor with same effective acf" begin
         se_a = @inferred sem_cor(a, acf0)
+        ismissing(@inferred(Float64, sem_cor(am, acf0, PassMissing())))
         ismissing(@inferred(Float64, sem_cor(am, acf0)))
-        @code_warntype sem_cor(am, acf0, PassMissing())
-        @edit sem_cor(am, acf0, PassMissing())
         se_am = @inferred sem_cor(am, acf0, ExactMissing())
         @test isnan(sem_cor(am[[3]],acf0, ExactMissing()))
         se_az = @inferred sem_cor(az, acf0)
@@ -175,13 +174,15 @@ using Unitful
         @test isnan(@inferred(sem_cor([1.0])))
         @test @inferred sem_cor(1.0:2) == 0.5
         @test @inferred sem_cor(1.0:3) == sqrt(var(1:3)/3)
-        @test @inferred var_cor(fill(1.0,4)) == 0.0 
-        @test @inferred sem_cor(fill(1.0,4)) == 0.0 # NA correlation but 0 variance
+        @test isnan(@inferred var_cor(fill(1.0,4))) # autocorrelation NaN
+        #@test @inferred var_cor(fill(1.0,4)) == 0.0 
+        @test isnan(@inferred sem_cor(fill(1.0,4))) # autocorrelation NaN
+        #@test @inferred sem_cor(fill(1.0,4)) == 0.0 
         @test ismissing(@inferred(Float64, sem_cor([1.0,2,missing])))
         @test ismissing(@inferred(Float64, var_cor([1.0,2,missing])))
         @test @inferred var_cor([1.0,2,missing], ExactMissing()) == 0.5
         @test @inferred sem_cor([1.0,2,missing], ExactMissing()) == sqrt(0.5/2)
-        @test isnan(@inferred sem_cor([1,missing,missing], ExactMissing()))
+        @test isnan(@inferred sem_cor([1.0,missing,missing], ExactMissing()))
    end;
 end;
 
