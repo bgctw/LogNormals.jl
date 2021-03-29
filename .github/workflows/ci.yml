@@ -18,7 +18,7 @@ jobs:
       matrix:
         version:
           #https://discourse.julialang.org/t/julia-v1-6-0-rc1-is-now-available/54775/11
-          - '1.5' 
+          #- '1.5' 
           - ^1.6.0-0
           #- '1' # Leave this line unchanged. '1' will automatically expand to the latest stable 1.x release of Julia.
         os:
