@@ -23,6 +23,7 @@ using StatsBase, Distributions, Missings, MissingStrategies
 using BandedMatrices, MappedArrays, RecursiveArrayTools, FillArrays, OffsetArrays
 using StaticArrays, LinearAlgebra
 using Random
+using SimpleTraits
 
 # general fitting to statistics
 include("fitstats.jl")

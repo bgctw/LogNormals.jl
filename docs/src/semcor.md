@@ -25,12 +25,12 @@ Var(\bar{x}) = {Var(x) \over n_{eff}}
 There are only ``n_{eff}`` number of effective obserservations
 in the series.
 ```@docs
-effective_n_cor(x, acf::AbstractVector, ms::MissingStrategy)
+effective_n_cor
 ```
 
 ## Standard error of the mean of a correlated series
 ```@docs
-sem_cor(x::Any, acfe::Any, ms::MissingStrategy; neff=nothing)
+sem_cor
 ```
 
 The default estiamtes the empirical autocorrelation from the given series. 
@@ -41,22 +41,21 @@ the daily applications of `sem_cor` using argument `acfe`.
 
 ## Variance of a correlated series
 ```@docs
-var_cor(x::Any, acfe::Any, ms::MissingStrategy; neff=nothing)
+var_cor
 ```
 
 ## Effective autocorrelation function
 ```@docs
-autocor_effective(x, acf::AbstractVector)
+autocor_effective
 ```
 
 ## Autocorrelation of a series with missing values
 ```@docs
-autocor(x::AbstractVector{Union{Missing,T}}, 
-    ms::MissingStrategy; kwargs... ) where {T<:Real}
+StatsBase.autocor
 ```
 
 ```@docs
-count_forlags(pred::Any, x::Any,lags::AbstractVector) 
+count_forlags
 ```
 
 

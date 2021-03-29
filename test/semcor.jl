@@ -1,7 +1,7 @@
 using LogNormals
 using Test, Distributions, StatsBase, Missings, MissingStrategies, Random
 using OffsetArrays, RecursiveArrayTools, LinearAlgebra
-using DistributionVectors
+using DistributionVectors # cormatri_for_acf
 using Unitful
 
 @testset "sem_cor" begin
@@ -44,13 +44,13 @@ using Unitful
         ismissing(@inferred(Vector{Float64},autocor(am, lags)))
         ismissing(@inferred(Vector{Float64},autocor(am, lags; demean=false)))
         acfe = @inferred autocor(a.-meana, lags; demean=false);
+        acfemf = @inferred autocor(am.-meana, lags, SkipMissing(); demean=false);
         acfem = @inferred(autocor(am.-meana, lags, ExactMissing(); demean=false))
         acfes = @inferred autocor((a.-meana)[4:end], lags; demean=false) # different nobs
         azdemean = copy(a.-meana); azdemean[ismissing.(am)] .= 0.0
         acfez = @inferred autocor(azdemean, lags; demean=false);
-        acfemf = @inferred autocor(am.-meana, lags, SkipMissing(); demean=false);
         hcat(acfe, acfem, acfez, acfemf)[1:4,:]
-        # with SkipMissing() rather than ExactMissing(): missing same as vector with zeros
+        ## with SkipMissing() rather than ExactMissing(): missing same as vector with zeros
         @test acfemf == acfez
         @test acfem[1] == acfez[1] == 1
         # with excactmissing: correct var(x) by two missings (100-2) 
@@ -64,6 +64,22 @@ using Unitful
         @test acfem[5:end] ≈ acfez[5:end]
         # TODO after StatsBase.autocor can deal with unitful
         #acfemu = @inferred autocor((am.-meana).*u"m", lags; demean=false);
+        #
+        # variant without lags
+        ismissing(@inferred autocor(am))
+        ismissing(@inferred autocor(am, PassMissing()))
+        @test acfemf ≈ (@inferred autocor(am.-meana, SkipMissing(); demean=false))[1:9]
+        @test acfem ≈ (@inferred(autocor(am.-meana, ExactMissing(); demean=false)))[1:9]
+        #SimpleTraits.istrait(IsEltypeSuperOfMissing{typeof(am.-meana)})
+        #
+        # with demean 
+        autocor(hcat(a,a), lags) # original variant 
+        tmp = @inferred autocor(am, lags, SkipMissing());
+        tmp2 = @inferred autocor(hcat(am,am), lags, SkipMissing());
+        @test tmp2[:,1] == tmp2[:,2] == tmp
+        tmp = @inferred autocor(am, lags, ExactMissing());
+        tmp2 = @inferred autocor(hcat(am,am), lags, ExactMissing());
+        @test tmp2[:,1] == tmp2[:,2] == tmp
     end;
     @testset "autocor_effective" begin
         effa = @inferred autocor_effective(a, acf0)
@@ -75,7 +91,12 @@ using Unitful
         neff = @inferred effective_n_cor(a, acf0)
         @test neff < length(a)
         @test neff ≈ 50.30 atol=0.01 # regression test
-        ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
+        # call with MissingStrategy but nonmissing type
+        neffs = @inferred effective_n_cor(a, acf0, ExactMissing())
+        @test neffs == neff
+        #
+        @test ismissing(@inferred(Missing,effective_n_cor(am, acf0, PassMissing())))
+        @test ismissing(@inferred(Missing,effective_n_cor(am, acf0)))
         neffm = @inferred effective_n_cor(am, acf0, ExactMissing())
         @test neffm < neff
         @test neffm ≈ 49.61 atol=0.01 # regression test
@@ -85,6 +106,7 @@ using Unitful
         # no correlation estimate for lag 3
         neff3 = @inferred effective_n_cor(am[1:4], [acf0..., 0.05, 0.05], ExactMissing())
         @test neff3 ≈ 1.43 atol=0.01 # regression test
+        #
         # without specifying acf
         ismissing(@inferred(Float64,effective_n_cor(am)))
         neff = @inferred effective_n_cor(am, ExactMissing())
@@ -94,9 +116,10 @@ using Unitful
         va1 = @inferred var_cor(a, acf0, ExactMissing())
         va2 = @inferred var_cor(a, acf0, PassMissing())
         va = @inferred var_cor(a, acf0)
-        @test va == va1 == va2
+        # slight differences between var(x) and var(skipmissing(x))
+        @test va ≈ va1 ≈ va2 
         # need to specify handling of missing otherwise get missing back
-        ismissing(@inferred(Float64,var_cor(am, acf0)))
+        @test ismissing(@inferred(Float64,var_cor(am, acf0)))
         vam = @inferred var_cor(am, acf0, ExactMissing())
         #@code_warntype var_cor(am, acf0, ms=ExactMissing(); neff=nothing)
         @test isnan(var_cor(am[[3]],acf0, ExactMissing()))
@@ -107,9 +130,15 @@ using Unitful
         # not correcting neff for missings overestimates neff
         # and hence underestimates uncertainty
         @test vamf < vam
+        # calling without acf
+        @test @inferred var_cor(a) > 0
+        @test ismissing(@inferred(var_cor(am)))
+        @test ismissing(@inferred(var_cor(am, PassMissing())))
+        @test @inferred(var_cor(am, ExactMissing())) > 0
     end;
     @testset "semcor with same effective acf" begin
         se_a = @inferred sem_cor(a, acf0)
+        ismissing(@inferred(Float64, sem_cor(am, acf0, PassMissing())))
         ismissing(@inferred(Float64, sem_cor(am, acf0)))
         se_am = @inferred sem_cor(am, acf0, ExactMissing())
         @test isnan(sem_cor(am[[3]],acf0, ExactMissing()))
@@ -154,13 +183,15 @@ using Unitful
         @test isnan(@inferred(sem_cor([1.0])))
         @test @inferred sem_cor(1.0:2) == 0.5
         @test @inferred sem_cor(1.0:3) == sqrt(var(1:3)/3)
-        @test @inferred var_cor(fill(1.0,4)) == 0.0 
-        @test @inferred sem_cor(fill(1.0,4)) == 0.0 # NA correlation but 0 variance
+        @test isnan(@inferred var_cor(fill(1.0,4))) # autocorrelation NaN
+        #@test @inferred var_cor(fill(1.0,4)) == 0.0 
+        @test isnan(@inferred sem_cor(fill(1.0,4))) # autocorrelation NaN
+        #@test @inferred sem_cor(fill(1.0,4)) == 0.0 
         @test ismissing(@inferred(Float64, sem_cor([1.0,2,missing])))
         @test ismissing(@inferred(Float64, var_cor([1.0,2,missing])))
         @test @inferred var_cor([1.0,2,missing], ExactMissing()) == 0.5
         @test @inferred sem_cor([1.0,2,missing], ExactMissing()) == sqrt(0.5/2)
-        @test isnan(@inferred sem_cor([1,missing,missing], ExactMissing()))
+        @test isnan(@inferred sem_cor([1.0,missing,missing], ExactMissing()))
    end;
 end;
 
