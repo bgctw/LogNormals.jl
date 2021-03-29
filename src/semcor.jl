@@ -26,13 +26,51 @@ function count_forlags(pred, x,lags::AbstractVector)
     count_forlag.(tuple(pred), tuple(x),lags)
 end
 
+
+# @macroexpand1 @handlemissings_stub(
+#     autocor(x::AbstractVector{<:Real}; demean::Bool=true) = 0,
+#     1,2,AbstractVector{<:Union{Missing,Real}}, nothing, 
+#     "_hmnolag"
+# )
+@handlemissings_stub(
+    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}; demean::Bool=true) = 0,
+    1,2,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
+    PassMissing(), 
+)
+@handlemissings_stub(
+    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, 
+    lags::AbstractVector{<:Integer}; demean::Bool=true) = 0,
+    1,3,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
+    PassMissing(), 
+)
+
+# the following works without redefinition - dispatcher found
+# MissingStrategies.@testdefinetrait_esc()
+# @traitfn function f1_esc(x::::!(SimpleTraits.BaseTraits.IsBits))
+#     "f1_esc !IsBist from LogNormals"  
+# end
+
+# the following works without redefinition - dispatcher found
+# MissingStrategies.@testdefinetrait_esc_opt()
+# @traitfn function f1_esc_opt(x::::!(SimpleTraits.BaseTraits.IsBits); demean::Bool=true)
+#     "f1_esc_opt !IsBist from LogNormals"  
+# end
+
+
 """
-    autocor(x::AbstractVector{x::Union{Missing,<:T}, lags, ms::MissingStrategy=PassMissing(); dmean::Bool=true}
+autocor(x::AbstractVector{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
+    dmean::Bool=true}
+autocor(x::AbstractVector{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
+    dmean::Bool=true}
+autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
+    dmean::Bool=true}
+autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
+    dmean::Bool=true}
 
 Estimate the autocorrelation function accounting for missing values.
 
 # Arguments
-- `x`: series, which may contain missing values
+- `x`: series or matrix with series in columns, which may contain missing values
 - `lags`: Integer vector of the lags for which correlation should be computed
 - `ms`: `MissingStrategy`. Defaults to `PassMissing`. Set to `ExactMissing()` to
     divide the sum
@@ -48,44 +86,54 @@ Note that `StatsBase.autocor` uses devision by `n` instead of 'n-k', the
 true length of the vectors correlated at lag `k` resulting in 
 low-biased correlations of higher lags for numerical stability reasons.
 """
-(@traitfn autocor(x::::!(IsEltypeSuperOfMissing), 
-    ms::MissingStrategy; kwargs...) = autocor(x; kwargs...)),
-(@traitfn autocor(x::::!(IsEltypeSuperOfMissing), lags::AbstractVector{<:Integer}, 
-    ms::MissingStrategy, kwargs...) = autocor(x, lags; kwargs...))
-# non-Missing types supplied with missing strategy directly call original function
-#
-# missing types without MissingStrategy call the PassMissing() variant
-@traitfn function autocor(x::::IsEltypeSuperOfMissing; kwargs...)
-    autocor(x, PassMissing(), kwargs...)
+
+# autocor(x::AbstractVector{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
+#     dmean::Bool=true},
+# autocor(x::AbstractVector{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
+#     dmean::Bool=true}
+
+#tmp4 = @macroexpand 
+@traitfn function autocor_hm(ms::MissingStrategy, x::::IsEltypeSuperOfMissing; 
+    demean::Bool=true
+    )
+    # lags not given -> forward to method with standard lag size
+    autocor_hm(ms, x, StatsBase.default_autolags(size(x,1)); demean)
 end
-@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer};
-    kwargs...)
-    autocor(x, lags, PassMissing(); kwargs...)
-end
-# if lags is not provided, call default_autolags
-@traitfn function autocor(x::::IsEltypeSuperOfMissing, ms::MissingStrategy; kwargs...)
-    autocor(x, StatsBase.default_autolags(size(x,1)), ms; kwargs...)
-end
-# Passmissing returs missing on any missing entry or converts argument types
-@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
-    ms::PassMissing; kwargs...)
-    any(ismissing.(x)) && return(missing)
+@traitfn function autocor_hm(ms::PassMissing, x::::IsEltypeSuperOfMissing, 
+    lags::AbstractVector{<:Integer}; demean::Bool=true, kwargs...
+    )
+    any(ismissing.(x)) && return missing
     xnm = convert.(nonmissingtype(eltype(x)),x)
-    SimpleTraits.istrait(IsEltypeSuperOfMissing(typeof(x1nm))) && error(
-        "could not convert to nonmissing")
-    autocor(xnm, lags; kwargs...)
+    Missing <: typeof(xnm) && error("could not convert to nonmissing type") 
+    autocor(x,lags; demean=demean, kwargs...)
 end
-# SkipMissing replaces missings by zero after demeaning.
-#   This underestimates both variance and covariances with varying effect on correlation
-# ExactMissing devides by a smaller number of terms
-@traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
-    ms::HandleMissingStrategy; demean::Bool=true, kwargs...)
-    z::Vector{Union{Missing,eltype(x)}} = demean ? x .- mean(skipmissing(x)) : x
-    # replace missing by zero: new type will not match signature of current function 
-    zpure = coalesce.(z, zero(z))::Vector{nonmissingtype(eltype(x))}
-    acf = autocor(zpure,lags;demean=false,kwargs...)
-    ms !== ExactMissing() && return(acf)
-    # correct for sum has been devided by a larger number of terms
+@traitfn function autocor_hm(ms::SkipMissing, x::::IsEltypeSuperOfMissing, 
+    lags::AbstractVector{<:Integer}; demean::Bool=true, kwargs...
+    )
+    z = demean ? demean!(copy(x),x) : x
+    zpure = coalesce.(z, zero(z))::Array{nonmissingtype(eltype(z)),ndims(z)}
+    # call original method without missing strategy and non-missing eltype
+    acf = autocor(zpure, lags; demean=false, kwargs...)
+end
+function demean!(z, x::AbstractVector)
+    z .=  x .- mean(skipmissing(x)) 
+    z
+end
+function demean!(z, x::AbstractMatrix)
+    z = copy(x)
+    for j = 1 : size(x,2)
+        demean!(@view(z[:,j]), x[:,j])
+    end
+    z
+end
+@traitfn function autocor_hm(ms::ExactMissing, x::::IsEltypeSuperOfMissing, 
+    lags::AbstractVector{<:Integer}; kwargs...
+    )
+    acf = autocor_hm(SkipMissing(), x, lags; kwargs...)
+    correct_acf_terms!(acf,x,lags)
+end
+function correct_acf_terms!(acf::AbstractVector,x::AbstractVector,lags)
+    # With SkipMissing, the sum has been devided by a larger number of terms
     # (including terms of missing/0) 
     lx = length(x)
     #zcorr = nterm_forlag(x,0)/lx
@@ -100,6 +148,69 @@ end
     end
     acf
 end
+function correct_acf_terms!(acf::AbstractMatrix,x::AbstractMatrix,lags)
+    # correct separately for each column in acf (and correponding x)
+    for j = 1 : size(acf,2)
+        correct_acf_terms!(@view(acf[:,j]),@view(x[:,j]),lags)
+    end
+    acf
+end
+
+# @traitfn function autocor_hm(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
+#     ms::HandleMissingStrategy; demean::Bool=true, kwargs...)
+#     z::Vector{Union{Missing,eltype(x)}} = demean ? x .- mean(skipmissing(x)) : x
+#     # replace missing by zero: new type will not match signature of current function 
+#     zpure = coalesce.(z, zero(z))::Vector{nonmissingtype(eltype(x))}
+#     acf = autocor(zpure,lags;demean=false,kwargs...)
+#     ms !== ExactMissing() && return(acf)
+#     # correct for sum has been devided by a larger number of terms
+#     # (including terms of missing/0) 
+#     lx = length(x)
+#     #zcorr = nterm_forlag(x,0)/lx
+#     missinginpair(x,y) = ismissing(x) || ismissing(y)
+#     zcorr_can = lx - count_forlag(missinginpair,x,0)#nterm_forlag(x,0)
+#     for (i,k) in enumerate(lags)
+#         #autocor code devides by lx instead of (lx-k)
+#         #https://github.com/JuliaStats/StatsBase.jl/issues/273#issuecomment-307560660
+#         # this cancels with lx of zcorr
+#         #acf[i] *= (lx - k)/nterm_forlag(x,k) * zcorr
+#         acf[i] *= zcorr_can/(lx - count_forlag(missinginpair,x,k)) 
+#     end
+#     acf
+# end
+
+# function with non-missing type already handled by @handlemissings_stub
+# (@traitfn autocor(x::::!(IsEltypeSuperOfMissing), 
+#     ms::MissingStrategy; kwargs...) = autocor(x; kwargs...)),
+# (@traitfn autocor(x::::!(IsEltypeSuperOfMissing), lags::AbstractVector{<:Integer}, 
+#     ms::MissingStrategy, kwargs...) = autocor(x, lags; kwargs...))
+# non-Missing types supplied with missing strategy directly call original function
+#
+# default method PassMissing already handled by @handlemissings_stub
+# missing types without MissingStrategy call the PassMissing() variant
+# @traitfn function autocor(x::::IsEltypeSuperOfMissing; kwargs...)
+#     autocor(x, PassMissing(), kwargs...)
+# end
+# @traitfn function autocor(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer};
+#     kwargs...)
+#     autocor(x, lags, PassMissing(); kwargs...)
+# end
+# if lags is not provided, call default_autolags
+# @traitfn function autocor(x::::IsEltypeSuperOfMissing, ms::MissingStrategy; kwargs...)
+#     autocor(x, StatsBase.default_autolags(size(x,1)), ms; kwargs...)
+# end
+# Passmissing returs missing on any missing entry or converts argument types
+# @traitfn function autocor_hm(x::::IsEltypeSuperOfMissing, lags::AbstractVector{<:Integer},
+#     ms::PassMissing; kwargs...)
+#     any(ismissing.(x)) && return(missing)
+#     xnm = convert.(nonmissingtype(eltype(x)),x)
+#     SimpleTraits.istrait(IsEltypeSuperOfMissing(typeof(x1nm))) && error(
+#         "could not convert to nonmissing")
+#     autocor(xnm, lags; kwargs...)
+# end
+# SkipMissing replaces missings by zero after demeaning.
+#   This underestimates both variance and covariances with varying effect on correlation
+# ExactMissing devides by a smaller number of terms
 
 """
     autocor_effective(x, ms::MissingStrategy=PassMissing())

@@ -44,13 +44,13 @@ using Unitful
         ismissing(@inferred(Vector{Float64},autocor(am, lags)))
         ismissing(@inferred(Vector{Float64},autocor(am, lags; demean=false)))
         acfe = @inferred autocor(a.-meana, lags; demean=false);
+        acfemf = @inferred autocor(am.-meana, lags, SkipMissing(); demean=false);
         acfem = @inferred(autocor(am.-meana, lags, ExactMissing(); demean=false))
         acfes = @inferred autocor((a.-meana)[4:end], lags; demean=false) # different nobs
         azdemean = copy(a.-meana); azdemean[ismissing.(am)] .= 0.0
         acfez = @inferred autocor(azdemean, lags; demean=false);
-        acfemf = @inferred autocor(am.-meana, lags, SkipMissing(); demean=false);
         hcat(acfe, acfem, acfez, acfemf)[1:4,:]
-        # with SkipMissing() rather than ExactMissing(): missing same as vector with zeros
+        ## with SkipMissing() rather than ExactMissing(): missing same as vector with zeros
         @test acfemf == acfez
         @test acfem[1] == acfez[1] == 1
         # with excactmissing: correct var(x) by two missings (100-2) 
@@ -71,6 +71,15 @@ using Unitful
         @test acfemf ≈ (@inferred autocor(am.-meana, SkipMissing(); demean=false))[1:9]
         @test acfem ≈ (@inferred(autocor(am.-meana, ExactMissing(); demean=false)))[1:9]
         #SimpleTraits.istrait(IsEltypeSuperOfMissing{typeof(am.-meana)})
+        #
+        # with demean 
+        autocor(hcat(a,a), lags) # original variant 
+        tmp = @inferred autocor(am, lags, SkipMissing());
+        tmp2 = @inferred autocor(hcat(am,am), lags, SkipMissing());
+        @test tmp2[:,1] == tmp2[:,2] == tmp
+        tmp = @inferred autocor(am, lags, ExactMissing());
+        tmp2 = @inferred autocor(hcat(am,am), lags, ExactMissing());
+        @test tmp2[:,1] == tmp2[:,2] == tmp
     end;
     @testset "autocor_effective" begin
         effa = @inferred autocor_effective(a, acf0)
