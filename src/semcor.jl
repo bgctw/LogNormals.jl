@@ -12,8 +12,10 @@ Count the number of pairs for lag `k` which fulfil a predicate.
 
 Common case is to compute the number of missings for the autocorrelation:
 with predicate `missinginpair(x,y) = ismissing(x) || ismissing(y)`.
-
 """
+function count_forlags(pred, x,lags::AbstractVector) 
+    count_forlag.(tuple(pred), tuple(x),lags)
+end,
 function count_forlag(pred,x,k::Integer)
     s = 0
     ax = OffsetArrays.no_offset_view(axes(x,1))
@@ -21,9 +23,6 @@ function count_forlag(pred,x,k::Integer)
         if pred(x[ax[i]], x[ax[i+k]]); s += 1; end
     end
     s
-end,
-function count_forlags(pred, x,lags::AbstractVector) 
-    count_forlag.(tuple(pred), tuple(x),lags)
 end
 
 
@@ -32,17 +31,6 @@ end
 #     1,2,AbstractVector{<:Union{Missing,Real}}, nothing, 
 #     "_hmnolag"
 # )
-@handlemissings_stub(
-    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}; demean::Bool=true) = 0,
-    1,2,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
-    PassMissing(), 
-)
-@handlemissings_stub(
-    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, 
-    lags::AbstractVector{<:Integer}; demean::Bool=true) = 0,
-    1,3,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
-    PassMissing(), 
-)
 
 # the following works without redefinition - dispatcher found
 # MissingStrategies.@testdefinetrait_esc()
@@ -58,14 +46,14 @@ end
 
 
 """
-autocor(x::AbstractVector{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
-    dmean::Bool=true}
-autocor(x::AbstractVector{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
-    dmean::Bool=true}
-autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
-    dmean::Bool=true}
-autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
-    dmean::Bool=true}
+    autocor(x::AbstractVector{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
+        dmean::Bool=true}
+    autocor(x::AbstractVector{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
+        dmean::Bool=true}
+    autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
+        dmean::Bool=true}
+    autocor(x::AbstractMatrix{x::<:Union{Missing,Real}, lags, ms::MissingStrategy=PassMissing(); 
+        dmean::Bool=true}
 
 Estimate the autocorrelation function accounting for missing values.
 
@@ -86,6 +74,20 @@ Note that `StatsBase.autocor` uses devision by `n` instead of 'n-k', the
 true length of the vectors correlated at lag `k` resulting in 
 low-biased correlations of higher lags for numerical stability reasons.
 """
+StatsBase.autocor
+
+@handlemissings_stub(
+    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, 
+    lags::AbstractVector{<:Integer}; demean::Bool=true) = 0,
+    1,3,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
+    PassMissing(), 
+)
+@handlemissings_stub(
+    autocor(x::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}; demean::Bool=true) = 0,
+    1,2,Union{AbstractVector{<:Union{Missing,Real}},AbstractMatrix{<:Union{Missing,Real}}}, 
+    PassMissing(), 
+)
+
 
 # autocor(x::AbstractVector{x::<:Union{Missing,Real}, ms::MissingStrategy=PassMissing(); 
 #     dmean::Bool=true},
